@@ -36,7 +36,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['show_providers'])) {
     $service_date = $_POST['date'];
     $address = $_POST['address'];
     // Fetch providers for this service
-    $stmt = $conn->prepare("SELECT u.id, u.username, sp.price, sp.availability FROM service_providers sp JOIN users u ON sp.user_id = u.id WHERE sp.service_id = ?");
+    $stmt = $conn->prepare("SELECT u.id, u.username, sp.price, sp.availability FROM service_providers sp JOIN users u ON sp.user_id = u.id WHERE sp.service_id = ? AND sp.status = 'approved'");
     $stmt->bind_param("i", $service_id);
     $stmt->execute();
     $res = $stmt->get_result();

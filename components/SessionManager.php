@@ -10,7 +10,7 @@ if (isset($_SESSION['last_activity']) && (time() - $_SESSION['last_activity'] > 
     // Session has expired, destroy it
     session_unset();
     session_destroy();
-    setcookie('user_id', '', time() - 3600, "/"); // Remove cookie too
+    setcookie('user_id', '', time() - 3600, "/");
     header('Location: login.php?expired=1');
     exit();
 }

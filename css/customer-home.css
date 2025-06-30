@@ -166,8 +166,7 @@ nav a:hover {
 
 /* Enhanced Hero Section */
 .hero {
-  background: linear-gradient(to right, rgba(0, 121, 107, 0.9), rgba(0, 77, 64, 0.9)),
-              url('https://images.unsplash.com/photo-1581578017424-6dc9d4c801a6') center/cover no-repeat;
+  background: linear-gradient(to right, rgba(0, 121, 107, 0.9), rgba(0, 77, 64, 0.9)),;
   color: white;
   padding: 60px 20px;
   text-align: center;

@@ -29,14 +29,25 @@ setcookie('provider_user_id', $_SESSION['user_id'], time() + (86400 * 30), "/");
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['booking_id'], $_POST['action'])) {
     $booking_id = intval($_POST['booking_id']);
     if ($_POST['action'] === 'approve') {
-        $stmt = $conn->prepare("UPDATE bookings SET status = 'pending_admin' WHERE id = ?");
+        // Only update if current status is 'pending_provider'
+        $stmt = $conn->prepare("SELECT status FROM bookings WHERE id = ?");
         $stmt->bind_param("i", $booking_id);
         $stmt->execute();
-        $message = 'Booking approved and sent to admin.';
+        $stmt->bind_result($current_status);
+        $stmt->fetch();
+        $stmt->close();
+        if ($current_status === 'pending_provider') {
+            $stmt = $conn->prepare("UPDATE bookings SET status = 'pending_admin' WHERE id = ?");
+            $stmt->bind_param("i", $booking_id);
+            $stmt->execute();
+            $stmt->close();
+            $message = 'Booking approved and sent to admin.';
+        }
     } elseif ($_POST['action'] === 'reject') {
         $stmt = $conn->prepare("UPDATE bookings SET status = 'rejected_by_provider' WHERE id = ?");
         $stmt->bind_param("i", $booking_id);
         $stmt->execute();
+        $stmt->close();
         $message = 'Booking rejected.';
     }
 }
@@ -46,6 +57,8 @@ if (isset($_POST['add_service_id'])) {
     $service_id = intval($_POST['add_service_id']);
     $price = floatval($_POST['service_price']);
     $availability = trim($_POST['availability']);
+    $provider_certificate = null;
+    
     // Set service_area to the selected service's name
     $service_area = '';
     foreach ($all_services as $service) {
@@ -54,6 +67,21 @@ if (isset($_POST['add_service_id'])) {
             break;
         }
     }
+    
+    // Handle certificate file upload
+    if (isset($_FILES['provider_certificate']) && $_FILES['provider_certificate']['error'] === UPLOAD_ERR_OK) {
+        $allowed_types = ['application/pdf', 'image/jpeg', 'image/png', 'image/jpg'];
+        $file_type = $_FILES['provider_certificate']['type'];
+        
+        if (in_array($file_type, $allowed_types)) {
+            $provider_certificate = file_get_contents($_FILES['provider_certificate']['tmp_name']);
+        } else {
+            $message = 'Invalid file type. Please upload PDF, JPEG, or PNG files only.';
+            $stmt->close();
+            // Continue to prevent the service from being added
+        }
+    }
+    
     // Check if already added
     $stmt = $conn->prepare("SELECT id FROM service_providers WHERE user_id = ? AND service_id = ?");
     $stmt->bind_param("ii", $provider_user_id, $service_id);
@@ -63,8 +91,8 @@ if (isset($_POST['add_service_id'])) {
         $message = 'You already offer this service!';
     } else {
         $stmt->close();
-        $stmt = $conn->prepare("INSERT INTO service_providers (user_id, service_id, price, availability, service_area) VALUES (?, ?, ?, ?, ?)");
-        $stmt->bind_param("iisss", $provider_user_id, $service_id, $price, $availability, $service_area);
+        $stmt = $conn->prepare("INSERT INTO service_providers (user_id, service_id, price, availability, service_area, provider_certificate) VALUES (?, ?, ?, ?, ?, ?)");
+        $stmt->bind_param("iissss", $provider_user_id, $service_id, $price, $availability, $service_area, $provider_certificate);
         if ($stmt->execute()) {
             $message = 'Service added to your offerings!';
         } else {
@@ -146,6 +174,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_profile'])) {
     exit();
 }
 
+// Handle marking booking as done or not done
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['done_booking_id'])) {
+    $booking_id = intval($_POST['done_booking_id']);
+    // Mark as served in a new table or update a field (here, let's use a 'served' field in bookings)
+    $stmt = $conn->prepare("UPDATE bookings SET served = 1 WHERE id = ?");
+    $stmt->bind_param("i", $booking_id);
+    $stmt->execute();
+    $stmt->close();
+    $message = 'Booking marked as served!';
+}
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['not_done_booking_id'])) {
+    $booking_id = intval($_POST['not_done_booking_id']);
+    $stmt = $conn->prepare("UPDATE bookings SET served = 0 WHERE id = ?");
+    $stmt->bind_param("i", $booking_id);
+    $stmt->execute();
+    $stmt->close();
+    $message = 'Booking marked as not served!';
+}
+
 // Fetch provider profile from user_profiles
 $profile = [ 'address' => '', 'profile_picture' => '' ];
 $stmt = $conn->prepare("SELECT address, profile_picture FROM user_profiles WHERE user_id = ?");
@@ -163,9 +210,9 @@ while ($row = $result->fetch_assoc()) {
     $all_services[] = $row;
 }
 
-// Fetch provider's services with price, availability, and service_area
+// Fetch provider's services with price, availability, service_area, and certificate
 $my_services = [];
-$sql = "SELECT s.name, sp.price, sp.service_id, sp.availability, sp.service_area FROM services s JOIN service_providers sp ON s.id = sp.service_id WHERE sp.user_id = ?";
+$sql = "SELECT s.name, sp.price, sp.service_id, sp.availability, sp.service_area, sp.provider_certificate FROM services s JOIN service_providers sp ON s.id = sp.service_id WHERE sp.user_id = ? AND sp.status = 'approved'";
 $stmt = $conn->prepare($sql);
 $stmt->bind_param("i", $provider_user_id);
 $stmt->execute();
@@ -196,7 +243,7 @@ $result->fetch();
 $result->close();
 
 // Total Earnings (sum of price for confirmed bookings)
-$result = $conn->prepare("SELECT COALESCE(SUM(sp.price),0) FROM bookings b JOIN service_providers sp ON b.provider_id = sp.user_id AND b.service_id = sp.service_id WHERE b.provider_id = ? AND b.status = 'confirmed'");
+$result = $conn->prepare("SELECT COALESCE(SUM(sp.price),0) FROM bookings b JOIN service_providers sp ON b.provider_id = sp.user_id AND b.service_id = sp.service_id WHERE b.provider_id = ? AND b.status = 'confirmed' AND sp.status = 'approved'");
 $result->bind_param("i", $provider_user_id);
 $result->execute();
 $result->bind_result($total_earnings);
@@ -222,7 +269,7 @@ $stmt->close();
 
 // Fetch all bookings for this provider (any status)
 $accepted_bookings = [];
-$sql = "SELECT b.id AS booking_id, u.username AS customer_name, s.name AS service_name, b.service_date, b.status
+$sql = "SELECT b.id AS booking_id, u.username AS customer_name, s.name AS service_name, b.service_date, b.status, b.served
         FROM bookings b
         JOIN services s ON b.service_id = s.id
         JOIN users u ON b.customer_id = u.id
@@ -246,6 +293,18 @@ $stmt->bind_result($username, $phone);
 if ($stmt->fetch()) {
     $provider_info['username'] = $username;
     $provider_info['phone'] = $phone;
+}
+$stmt->close();
+
+// Fetch customers served (served=1)
+$customers_served = [];
+$sql = "SELECT u.username, u.email, s.name AS service_name FROM bookings b JOIN users u ON b.customer_id = u.id JOIN services s ON b.service_id = s.id WHERE b.provider_id = ? AND b.served = 1";
+$stmt = $conn->prepare($sql);
+$stmt->bind_param("i", $provider_user_id);
+$stmt->execute();
+$result = $stmt->get_result();
+while ($row = $result->fetch_assoc()) {
+    $customers_served[] = $row;
 }
 $stmt->close();
 ?>
@@ -306,7 +365,6 @@ $stmt->close();
 
       <section id="bookings">
         <h3>Manage Bookings</h3>
-        <?php if ($message) { echo '<p style="color: green;">' . htmlspecialchars($message) . '</p>'; } ?>
         <table>
           <thead>
             <tr><th>Customer</th><th>Service</th><th>Date</th><th>Status</th><th>Actions</th></tr>
@@ -338,7 +396,7 @@ $stmt->close();
 
       <section id="services">
         <h3>My Services</h3>
-        <form method="POST" action="" style="margin-bottom: 20px;">
+        <form method="POST" action="" enctype="multipart/form-data" style="margin-bottom: 20px;">
           <label for="add_service_id">Add a Service:</label>
           <select id="add_service_id" name="add_service_id" required>
             <option value="">Select Service</option>
@@ -350,16 +408,18 @@ $stmt->close();
           <input type="number" step="0.01" id="service_price" name="service_price" required>
           <label for="availability">Availability:</label>
           <input type="text" id="availability" name="availability" placeholder="e.g. Mon-Fri, 9am-5pm" required>
+          <label for="provider_certificate">Certificate (PDF, JPEG, PNG):</label>
+          <input type="file" id="provider_certificate" name="provider_certificate" accept=".pdf,.jpg,.jpeg,.png">
           <button type="submit">Add Service</button>
         </form>
-        <?php if ($message) { echo '<p style="color: green;">' . htmlspecialchars($message) . '</p>'; } ?>
         <table class="services-table">
           <thead>
             <tr>
               <th>Service</th>
               <th>Price</th>
               <th>Availability</th>
-              <th>Service Area</th>
+              <th></th>
+              <th>Certificate</th>
               <th>Action</th>
             </tr>
           </thead>
@@ -370,6 +430,13 @@ $stmt->close();
               <td>Rs. <?= htmlspecialchars($service['price']) ?></td>
               <td><?= htmlspecialchars($service['availability']) ?></td>
               <td><?= htmlspecialchars($service['service_area']) ?></td>
+              <td>
+                <?php if (!empty($service['provider_certificate'])): ?>
+                  <a href="download_service_certificate.php?service_id=<?= $service['service_id'] ?>" target="_blank">Download Certificate</a>
+                <?php else: ?>
+                  No certificate
+                <?php endif; ?>
+              </td>
               <td>
                 <form method="POST" style="display:inline;">
                   <input type="hidden" name="remove_service_id" value="<?= $service['service_id'] ?>">
@@ -389,7 +456,13 @@ $stmt->close();
             <tr><th>Name</th><th>Email</th><th>Service</th></tr>
           </thead>
           <tbody>
-            <!-- Dynamically load customers here. Remove mock data. -->
+            <?php foreach ($customers_served as $served): ?>
+              <tr>
+                <td><?= htmlspecialchars($served['username']) ?></td>
+                <td><?= htmlspecialchars($served['email']) ?></td>
+                <td><?= htmlspecialchars($served['service_name']) ?></td>
+              </tr>
+            <?php endforeach; ?>
           </tbody>
         </table>
       </section>
@@ -437,6 +510,16 @@ $stmt->close();
                     }
                   ?>
                   <span class="<?= $statusClass ?>"><?= $statusText ?></span>
+                  <?php if ($status === 'confirmed' && (!isset($row['served']) || $row['served'] === null)): ?>
+                    <form method="POST" style="display:inline;">
+                      <input type="hidden" name="done_booking_id" value="<?= $row['booking_id'] ?>">
+                      <button type="submit">Done</button>
+                    </form>
+                    <form method="POST" style="display:inline;">
+                      <input type="hidden" name="not_done_booking_id" value="<?= $row['booking_id'] ?>">
+                      <button type="submit">Not Done</button>
+                    </form>
+                  <?php endif; ?>
                 </td>
               </tr>
             <?php endforeach; ?>

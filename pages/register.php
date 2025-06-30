@@ -17,6 +17,14 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $confirmPassword = $_POST['confirm-password'];
     $role = $_POST['role'];
 
+    // Only for providers: handle file upload
+    $fileData = null;
+    $fileName = null;
+    if ($role === 'provider' && isset($_FILES['provider_document']) && $_FILES['provider_document']['error'] === UPLOAD_ERR_OK) {
+        $fileData = file_get_contents($_FILES['provider_document']['tmp_name']);
+        $fileName = $_FILES['provider_document']['name'];
+    }
+
     if (!preg_match("/^[a-z._%+-]+@[a-z.-]+\.[a-z]{2,}$/", $email)) {
        $error[] = 'Invalid email format.';
    }
@@ -36,9 +44,14 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         } else {
             // Hash password
             $hashed_password = password_hash($password, PASSWORD_DEFAULT);
-            // Insert user (assume users table has a phone column)
-            $stmt = $conn->prepare("INSERT INTO users (username, email, phone, password, role) VALUES (?, ?, ?, ?, ?)");
-            $stmt->bind_param("sssss", $name, $email, $phone, $hashed_password, $role);
+            if ($role === 'provider') {
+                $stmt = $conn->prepare("INSERT INTO users (username, email, phone, password, role, provider_document, provider_document_name, status) VALUES (?, ?, ?, ?, ?, ?, ?, 'pending')");
+                $null = null;
+                $stmt->bind_param("sssssss", $name, $email, $phone, $hashed_password, $role, $fileData, $fileName);
+            } else {
+                $stmt = $conn->prepare("INSERT INTO users (username, email, phone, password, role, status) VALUES (?, ?, ?, ?, ?, 'active')");
+                $stmt->bind_param("sssss", $name, $email, $phone, $hashed_password, $role);
+            }
             if ($stmt->execute()) {
                 // Redirect to login.php after successful registration
                 header('Location: login.php?registered=1');
@@ -72,7 +85,7 @@ closeDBConnection($conn);
           }
         }
       ?>
-    <form id="register-form" method="POST" action="">
+    <form id="register-form" method="POST" action="" enctype="multipart/form-data">
       <label for="name">Full Name:</label>
       <input type="text" id="name" name="name" placeholder="Enter your name" required />
 
@@ -96,6 +109,11 @@ closeDBConnection($conn);
         <option value="admin">Admin</option>
       </select>
 
+      <div id="provider-doc-upload" style="display:none; margin-top:10px;">
+        <label for="provider_document">Attach Document (for Providers):</label>
+        <input type="file" id="provider_document" name="provider_document" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx" />
+      </div>
+
       <button type="submit">Register</button>
     </form>
     <p id="register-message" style="margin-top: 10px; color: <?= strpos(
@@ -104,5 +122,15 @@ closeDBConnection($conn);
     </p>
     <p>Already have an account? <a href="login.php">Login here</a></p>
   </div>
+  <script>
+  document.getElementById('role').addEventListener('change', function() {
+    var docUpload = document.getElementById('provider-doc-upload');
+    if (this.value === 'provider') {
+      docUpload.style.display = 'block';
+    } else {
+      docUpload.style.display = 'none';
+    }
+  });
+  </script>
 </body>
 </html>

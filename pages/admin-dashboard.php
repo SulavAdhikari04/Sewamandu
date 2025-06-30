@@ -23,10 +23,10 @@ if ($conn->connect_error) {
 }
 
 $message = '';
-// Handle Approve/Reject actions
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['booking_id'], $_POST['action'])) {
+// Handle Approve/Reject actions for bookings
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['booking_id'], $_POST['booking_action'])) {
     $booking_id = intval($_POST['booking_id']);
-    if ($_POST['action'] === 'approve') {
+    if ($_POST['booking_action'] === 'approve') {
         $stmt = $conn->prepare("UPDATE bookings SET status = 'confirmed' WHERE id = ?");
         $stmt->bind_param("i", $booking_id);
         if ($stmt->execute()) {
@@ -35,7 +35,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['booking_id'], $_POST[
             $message = 'Error: ' . $stmt->error;
         }
         $stmt->close();
-    } elseif ($_POST['action'] === 'reject') {
+    } elseif ($_POST['booking_action'] === 'reject') {
         $stmt = $conn->prepare("UPDATE bookings SET status = 'rejected_by_admin' WHERE id = ?");
         $stmt->bind_param("i", $booking_id);
         if ($stmt->execute()) {
@@ -88,6 +88,75 @@ if (isset($_POST['delete_service_id'])) {
     $stmt->close();
 }
 
+// Handle user deletion
+if (isset($_POST['delete_user_id'])) {
+    $delete_user_id = intval($_POST['delete_user_id']);
+    
+    // First delete related bookings
+    $stmt = $conn->prepare("DELETE FROM bookings WHERE customer_id = ? OR provider_id = ?");
+    $stmt->bind_param("ii", $delete_user_id, $delete_user_id);
+    $stmt->execute();
+    $stmt->close();
+    
+    // Then delete the user
+    $stmt = $conn->prepare("DELETE FROM users WHERE id = ?");
+    $stmt->bind_param("i", $delete_user_id);
+    if ($stmt->execute()) {
+        $message = 'User and all related data deleted successfully!';
+    } else {
+        $message = 'Error deleting user: ' . $stmt->error;
+    }
+    $stmt->close();
+}
+
+// Handle service approval/rejection
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['service_provider_id'], $_POST['service_action'])) {
+    $service_provider_id = intval($_POST['service_provider_id']);
+    if ($_POST['service_action'] === 'approve') {
+        $stmt = $conn->prepare("UPDATE service_providers SET status = 'approved' WHERE id = ?");
+        $stmt->bind_param("i", $service_provider_id);
+        if ($stmt->execute()) {
+            $message = 'Service approved successfully!';
+        } else {
+            $message = 'Error: ' . $stmt->error;
+        }
+        $stmt->close();
+    } elseif ($_POST['service_action'] === 'reject') {
+        $stmt = $conn->prepare("UPDATE service_providers SET status = 'rejected' WHERE id = ?");
+        $stmt->bind_param("i", $service_provider_id);
+        if ($stmt->execute()) {
+            $message = 'Service rejected successfully!';
+        } else {
+            $message = 'Error: ' . $stmt->error;
+        }
+        $stmt->close();
+    }
+}
+
+// Handle provider approval/rejection
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['user_id'], $_POST['user_action'])) {
+    $user_id = intval($_POST['user_id']);
+    if ($_POST['user_action'] === 'approve') {
+        $stmt = $conn->prepare("UPDATE users SET status = 'active' WHERE id = ?");
+        $stmt->bind_param("i", $user_id);
+        if ($stmt->execute()) {
+            $message = 'Provider approved successfully!';
+        } else {
+            $message = 'Error: ' . $stmt->error;
+        }
+        $stmt->close();
+    } elseif ($_POST['user_action'] === 'reject') {
+        $stmt = $conn->prepare("UPDATE users SET status = 'rejected' WHERE id = ?");
+        $stmt->bind_param("i", $user_id);
+        if ($stmt->execute()) {
+            $message = 'Provider rejected successfully!';
+        } else {
+            $message = 'Error: ' . $stmt->error;
+        }
+        $stmt->close();
+    }
+}
+
 // Fetch all bookings
 $sql = "SELECT b.id AS booking_id, s.name AS service_name, u.username AS customer_name, b.service_date, b.status
         FROM bookings b
@@ -98,13 +167,6 @@ $stmt = $conn->prepare($sql);
 $stmt->execute();
 $result = $stmt->get_result();
 
-// Fetch categories for dropdown
-$categories = [];
-$result = $conn->query("SELECT id, name FROM service_categories");
-while ($row = $result->fetch_assoc()) {
-    $categories[] = $row;
-}
-
 // Fetch all services for listing
 $services = [];
 $result = $conn->query("SELECT id, name, description FROM services");
@@ -112,9 +174,9 @@ while ($row = $result->fetch_assoc()) {
     $services[] = $row;
 }
 
-// Fetch all users for user management
+// Fetch all users for user management (including id and provider_document) - excluding only pending providers
 $users = [];
-$result = $conn->query("SELECT username, email, role, created_at FROM users");
+$result = $conn->query("SELECT id, username, email, role, created_at, status, provider_document FROM users WHERE role != 'provider' OR status != 'pending'");
 while ($row = $result->fetch_assoc()) {
     $users[] = $row;
 }
@@ -170,8 +232,31 @@ $total_bookings = $stats['total_bookings'];
 $result = $conn->query("SELECT COUNT(*) AS total_services FROM services");
 $stats = $result->fetch_assoc();
 $total_services = $stats['total_services'];
-// Pending provider verifications (assuming a 'verifications' table or similar, else set to 0)
-$pending_verifications = 0;
+// Pending provider verifications
+$result = $conn->query("SELECT COUNT(*) AS pending_verifications FROM users WHERE role = 'provider' AND status = 'pending'");
+$stats = $result->fetch_assoc();
+$pending_verifications = $stats['pending_verifications'];
+
+// Fetch pending providers for verification table
+$pending_providers = [];
+$result = $conn->query("SELECT id, username, email, created_at, provider_document FROM users WHERE role = 'provider' AND status = 'pending'");
+while ($row = $result->fetch_assoc()) {
+    $pending_providers[] = $row;
+}
+
+// Fetch pending services for admin review
+$pending_services = [];
+$sql = "SELECT sp.id as service_provider_id, sp.price, sp.availability, sp.service_area, sp.provider_certificate, 
+               s.name as service_name, u.username as provider_name, u.email as provider_email
+        FROM service_providers sp 
+        JOIN services s ON sp.service_id = s.id 
+        JOIN users u ON sp.user_id = u.id 
+        WHERE sp.status = 'pending' OR sp.status IS NULL
+        ORDER BY sp.id DESC";
+$result = $conn->query($sql);
+while ($row = $result->fetch_assoc()) {
+    $pending_services[] = $row;
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -189,6 +274,7 @@ $pending_verifications = 0;
         <li><a href="#overview">Dashboard</a></li>
         <li><a href="#user">Users</a></li>
         <li><a href="#verify">Verifications</a></li>
+        <li><a href="#services">Service Reviews</a></li>
         <li><a href="#booking">Bookings</a></li>
         <li><a href="#export">Export</a></li>
       </ul>
@@ -214,7 +300,7 @@ $pending_verifications = 0;
   <h3>User Management</h3>
   <table>
     <thead>
-      <tr><th>Username</th><th>Email</th><th>Role</th><th>Registered At</th></tr>
+      <tr><th>Username</th><th>Email</th><th>Role</th><th>Registered At</th><th>Status</th><th>Document</th><th>Actions</th></tr>
     </thead>
     <tbody>
       <?php foreach ($users as $user): ?>
@@ -223,6 +309,27 @@ $pending_verifications = 0;
         <td><?= htmlspecialchars($user['email']) ?></td>
         <td><?= htmlspecialchars($user['role']) ?></td>
         <td><?= htmlspecialchars($user['created_at']) ?></td>
+        <td><?= ($user['role'] === 'customer' || $user['role'] === 'admin') ? 'active' : htmlspecialchars($user['status']) ?></td>
+        <td>
+          <?php if (!empty($user['provider_document'])): ?>
+            <a href="download_document.php?user_id=<?= $user['id'] ?>" target="_blank">Download Document</a>
+          <?php else: ?>
+            No document
+          <?php endif; ?>
+        </td>
+        <td>
+          <?php if ($user['role'] === 'provider' && $user['status'] === 'pending'): ?>
+            <form method="POST" style="display:inline;">
+              <input type="hidden" name="user_id" value="<?= $user['id'] ?>">
+              <button type="submit" name="user_action" value="approve">Approve</button>
+              <button type="submit" name="user_action" value="reject">Reject</button>
+            </form>
+          <?php endif; ?>
+          <form method="POST" style="display:inline; margin-left: 5px;">
+            <input type="hidden" name="delete_user_id" value="<?= $user['id'] ?>">
+            <button type="submit" onclick="return confirm('Are you sure you want to delete this user and all their data? This action cannot be undone.');" style="background-color: #dc3545; color: white; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer;">Remove</button>
+          </form>
+        </td>
       </tr>
       <?php endforeach; ?>
     </tbody>
@@ -231,10 +338,68 @@ $pending_verifications = 0;
   <h3>Provider Verifications</h3>
   <table>
     <thead>
-      <tr><th>Name</th><th>Documents</th><th>Action</th></tr>
+      <tr><th>Name</th><th>Email</th><th>Registered At</th><th>Documents</th><th>Action</th></tr>
     </thead>
     <tbody>
-      <!-- Dynamically load verifications here. Remove mock data. -->
+      <?php foreach ($pending_providers as $provider): ?>
+      <tr>
+        <td><?= htmlspecialchars($provider['username']) ?></td>
+        <td><?= htmlspecialchars($provider['email']) ?></td>
+        <td><?= htmlspecialchars($provider['created_at']) ?></td>
+        <td>
+          <?php if (!empty($provider['provider_document'])): ?>
+            <a href="download_document.php?user_id=<?= $provider['id'] ?>" target="_blank">Download Document</a>
+          <?php else: ?>
+            No document
+          <?php endif; ?>
+        </td>
+        <td>
+          <form method="POST" style="display:inline;">
+            <input type="hidden" name="user_id" value="<?= $provider['id'] ?>">
+            <button type="submit" name="user_action" value="approve">Approve</button>
+            <button type="submit" name="user_action" value="reject">Reject</button>
+          </form>
+        </td>
+      </tr>
+      <?php endforeach; ?>
+    </tbody>
+  </table>
+
+  <h3 id="services">Service Reviews</h3>
+  <table>
+    <thead>
+      <tr><th>Provider</th><th>Service</th><th>Price</th><th>Availability</th><th></th><th>Certificate</th><th>Actions</th></tr>
+    </thead>
+    <tbody>
+      <?php foreach ($pending_services as $service): ?>
+      <tr>
+        <td>
+          <?= htmlspecialchars($service['provider_name']) ?><br>
+          <small><?= htmlspecialchars($service['provider_email']) ?></small>
+        </td>
+        <td><?= htmlspecialchars($service['service_name']) ?></td>
+        <td>Rs. <?= htmlspecialchars($service['price']) ?></td>
+        <td><?= htmlspecialchars($service['availability']) ?></td>
+        <td><?= htmlspecialchars($service['service_area']) ?></td>
+        <td>
+          <?php if (!empty($service['provider_certificate'])): ?>
+            <a href="download_service_certificate_admin.php?service_provider_id=<?= $service['service_provider_id'] ?>" target="_blank">Download Certificate</a>
+          <?php else: ?>
+            No certificate
+          <?php endif; ?>
+        </td>
+        <td>
+          <form method="POST" style="display:inline;">
+            <input type="hidden" name="service_provider_id" value="<?= $service['service_provider_id'] ?>">
+            <button type="submit" name="service_action" value="approve" style="background-color: #28a745; color: white; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer;">Approve</button>
+          </form>
+          <form method="POST" style="display:inline;">
+            <input type="hidden" name="service_provider_id" value="<?= $service['service_provider_id'] ?>">
+            <button type="submit" name="service_action" value="reject" style="background-color: #dc3545; color: white; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer;">Reject</button>
+          </form>
+        </td>
+      </tr>
+      <?php endforeach; ?>
     </tbody>
   </table>
 
@@ -247,7 +412,6 @@ $pending_verifications = 0;
     <input type="text" id="service_desc" name="service_desc" required>
     <button type="submit">Add Service</button>
   </form>
-  <?php if ($message) { echo '<p style="color: green;">' . htmlspecialchars($message) . '</p>'; } ?>
   <table>
     <thead>
       <tr><th>Name</th><th>Description</th><th>Action</th></tr>
@@ -269,7 +433,6 @@ $pending_verifications = 0;
   </table>
 
   <h3>Booking Management</h3>
-  <?php if ($message) { echo '<p style="color: green;">' . htmlspecialchars($message) . '</p>'; } ?>
   <table>
     <thead>
       <tr><th>Service</th><th>Customer</th><th>Provider</th><th>Date</th><th>Status</th><th>Actions</th></tr>
@@ -285,11 +448,11 @@ $pending_verifications = 0;
         <td>
           <form method="POST" style="display:inline;">
             <input type="hidden" name="booking_id" value="<?= $row['booking_id'] ?>">
-            <button type="submit" name="action" value="approve">Approve</button>
+            <button type="submit" name="booking_action" value="approve">Approve</button>
           </form>
           <form method="POST" style="display:inline;">
             <input type="hidden" name="booking_id" value="<?= $row['booking_id'] ?>">
-            <button type="submit" name="action" value="reject">Reject</button>
+            <button type="submit" name="booking_action" value="reject">Reject</button>
           </form>
         </td>
       </tr>
@@ -315,9 +478,9 @@ $pending_verifications = 0;
     </tbody>
   </table>
 
-  <h3>Data Export</h3>
-  <button>Download Providers CSV</button>
-  <button>Download Bookings CSV</button>
+  <!-- <h3>Data Export</h3>
+  <button onclick="alert('Export functionality will be implemented soon!')">Download Providers CSV</button>
+  <button onclick="alert('Export functionality will be implemented soon!')">Download Bookings CSV</button> -->
 </div>
 </div>
 </body>
