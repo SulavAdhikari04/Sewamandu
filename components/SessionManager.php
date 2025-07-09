@@ -2,7 +2,6 @@
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
-// Set session timeout to 2 hours (7200 seconds)
 $session_timeout = 7200;
 
 // Check if session has expired

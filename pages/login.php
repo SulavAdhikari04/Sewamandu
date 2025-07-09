@@ -114,6 +114,7 @@ closeDBConnection($conn);
       <?= htmlspecialchars($message) ?>
     </p>
     <p>Don't have an account? <a href="register.php">Register here</a></p>
+    <p><a href="forgot-password.php">Forgot your password?</a></p>
   </section>
 </body>
 </html>

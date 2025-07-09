@@ -1,4 +1,4 @@
-<?php
+<!-- <?php
 require_once '../components/SessionManager.php';
 require_once '../components/Database.php';
 
@@ -55,4 +55,4 @@ if ($row = $result->fetch_assoc()) {
 
 $stmt->close();
 $conn->close();
-?> 
+?>  -->

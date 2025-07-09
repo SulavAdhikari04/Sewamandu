@@ -177,7 +177,7 @@ closeDBConnection($conn);
             <tr><th>Date</th><th>Message</th></tr>
           </thead>
           <tbody>
-            <!-- Dynamically load notifications here. Remove mock data. -->
+            <!-- Dynamically load notifications here.-->
           </tbody>
         </table>
       </section>
@@ -189,7 +189,7 @@ closeDBConnection($conn);
             <tr><th>Service</th><th>Provider</th><th>Rating</th><th>Comment</th></tr>
           </thead>
           <tbody>
-            <!-- Dynamically load reviews here. Remove mock data. -->
+            <!-- Dynamically load reviews here. -->
           </tbody>
         </table>
       </section>

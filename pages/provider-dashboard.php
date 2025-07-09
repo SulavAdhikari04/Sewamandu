@@ -419,7 +419,7 @@ $stmt->close();
               <th>Price</th>
               <th>Availability</th>
               <th></th>
-              <th>Certificate</th>
+              <th> </th>
               <th>Action</th>
             </tr>
           </thead>
@@ -573,8 +573,8 @@ $stmt->close();
 </body>
 <script>
   window.addEventListener('DOMContentLoaded', () => {
-    const name = localStorage.getItem('providerName') || "Ramesh Thapa";
-    const email = localStorage.getItem('providerEmail') || "ramesh@example.com";
+    const name = localStorage.getItem('providerName') || "provider";
+    const email = localStorage.getItem('providerEmail') || "provider@gmail.com";
     const phone = localStorage.getItem('providerPhone') || "9801000000";
 
     document.getElementById('view-name').textContent = name;

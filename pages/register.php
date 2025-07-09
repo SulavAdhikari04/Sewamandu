@@ -3,6 +3,7 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 require_once '../components/Database.php';
+require_once '../components/EmailConfig_Gmail.php';
 // Database connection
 $conn = getDBConnection();
 
@@ -53,6 +54,13 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 $stmt->bind_param("sssss", $name, $email, $phone, $hashed_password, $role);
             }
             if ($stmt->execute()) {
+                // Send welcome email
+                $to = $email;
+                $subject = getWelcomeEmailSubject();
+                $email_content = generateWelcomeEmail($name, $role);
+                
+                $email_result = sendEmail($to, $subject, $email_content['text'], $email_content['html']);
+                
                 // Redirect to login.php after successful registration
                 header('Location: login.php?registered=1');
                 exit();
