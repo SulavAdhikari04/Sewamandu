@@ -12,15 +12,15 @@ use PHPMailer\PHPMailer\Exception;
 require_once __DIR__ . '/../vendor/autoload.php';
 
 // Email configuration settings
-define('EMAIL_FROM', 'sulavadhikari69@gmail.com'); // Your Gmail address
+define('EMAIL_FROM', 'officialgharsewa@gmail.com'); // Your Gmail address
 define('EMAIL_FROM_NAME', 'GharSewa');
-define('EMAIL_REPLY_TO', 'sulavadhikari69@gmail.com');
+define('EMAIL_REPLY_TO', 'officialgharsewa@gmail.com');
 
 // Gmail SMTP Configuration
 define('SMTP_HOST', 'smtp.gmail.com');
 define('SMTP_PORT', 587);
-define('SMTP_USERNAME', 'sulavadhikari69@gmail.com'); // Your Gmail address
-define('SMTP_PASSWORD', 'wdfbdezlwxmtnolw'); // Your Gmail app password
+define('SMTP_USERNAME', 'officialgharsewa@gmail.com'); // Your Gmail address
+define('SMTP_PASSWORD', 'kuugrcejbltwnhrh'); // Your Gmail app password
 define('USE_SMTP', true);
 
 /**
@@ -840,7 +840,7 @@ function generateWelcomeEmail($username, $role) {
                 
                 <div class='cta-section'>
                     <p style='margin-bottom: 15px; color: #666;'>Ready to get started?</p>
-                    <a href='http://localhost/gharsewa/pages/login.php' class='cta-button'>Login to Your Account</a>
+                    <a href='http://localhost/gharsewa/pages/login.php' class='cta-button' style='color:white;' >Login to Your Account</a>
                 </div>
             </div>
             

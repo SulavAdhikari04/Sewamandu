@@ -127,7 +127,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         </div>
         
         <div class="footer">
-            <p>Need help? <a href="mailto:sulavadhikari69@gmail.com">Contact Support</a></p>
+            <p>Need help? <a href="mailto:officialgharsewa@gmail.com">Contact Support</a></p>
         </div>
     </div>
 
