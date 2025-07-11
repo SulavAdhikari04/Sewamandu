@@ -57,7 +57,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['book_with_provider']))
     $booking_date = date('Y-m-d');
     $status = 'pending_provider';
 
-    $stmt = $conn->prepare("INSERT INTO bookings (customer_id, service_id, status, booking_date, service_date, address, provider_id) VALUES (?, ?, ?, ?, ?, ?, ?)");
+    $stmt = $conn->prepare("INSERT INTO bookings (customer_id, service_id, status, booking_date, service_date, address, provider_id, served) VALUES (?, ?, ?, ?, ?, ?, ?, NULL)");
     $stmt->bind_param("iissssi", $customer_id, $service_id, $status, $booking_date, $service_date, $address, $provider_id);
     if ($stmt->execute()) {
         $message = "Booking request sent!";
