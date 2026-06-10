@@ -1,6 +1,7 @@
 <?php
 require_once '../components/SessionManager.php';
 require_once '../components/Database.php';
+require_once '../components/BookingStatus.php';
 
 // Add  cookies
 setcookie('customer_dashboard_visited', 'true', time() + (86400 * 30), "/");
@@ -17,7 +18,7 @@ $conn = getDBConnection();
 
 $user_id = $_SESSION['user_id'];
 $bookings = [];
-$sql = "SELECT s.name AS service_name, u.username AS provider_name, b.service_date, b.status
+$sql = "SELECT s.name AS service_name, u.username AS provider_name, b.service_date, b.status AS booking_status
         FROM bookings b
         LEFT JOIN services s ON b.service_id = s.id
         LEFT JOIN users u ON b.provider_id = u.id
@@ -113,6 +114,7 @@ closeDBConnection($conn);
   <meta charset="UTF-8">
   <title>Customer Dashboard - Sewamandu</title>
   <link rel="stylesheet" href="../css/customer-dashboard.css">
+  <link rel="stylesheet" href="../css/booking-status.css">
 </head>
 <body>
   <div class="layout">
@@ -162,7 +164,11 @@ closeDBConnection($conn);
                 <td><?= htmlspecialchars($booking['service_name']) ?></td>
                 <td><?= htmlspecialchars($booking['provider_name']) ?></td>
                 <td><?= htmlspecialchars($booking['service_date']) ?></td>
-                <td><?= htmlspecialchars($booking['status']) ?></td>
+                <td>
+                  <span class="<?= getBookingStatusBadgeClass($booking['booking_status']) ?>">
+                    <?= htmlspecialchars(getBookingStatusLabel($booking['booking_status'])) ?>
+                  </span>
+                </td>
               </tr>
             <?php endforeach; ?>
           </tbody>

@@ -4,6 +4,7 @@ ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
 require_once '../components/SessionManager.php';
 require_once '../components/Database.php';
+require_once '../components/BookingStatus.php';
 
 // Add cookies
 setcookie('admin_dashboard_visited', 'true', time() + (86400 * 30), "/");
@@ -27,7 +28,7 @@ $message = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['booking_id'], $_POST['booking_action'])) {
     $booking_id = intval($_POST['booking_id']);
     if ($_POST['booking_action'] === 'approve') {
-        $stmt = $conn->prepare("UPDATE bookings SET status = 'confirmed' WHERE id = ?");
+        $stmt = $conn->prepare("UPDATE bookings SET status = 'confirmed' WHERE id = ? AND status = 'pending_admin'");
         $stmt->bind_param("i", $booking_id);
         if ($stmt->execute()) {
             $message = 'Booking approved and confirmed.';
@@ -36,7 +37,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['booking_id'], $_POST[
         }
         $stmt->close();
     } elseif ($_POST['booking_action'] === 'reject') {
-        $stmt = $conn->prepare("UPDATE bookings SET status = 'rejected_by_admin' WHERE id = ?");
+        $stmt = $conn->prepare("UPDATE bookings SET status = 'rejected_by_admin' WHERE id = ? AND status = 'pending_admin'");
         $stmt->bind_param("i", $booking_id);
         if ($stmt->execute()) {
             $message = 'Booking rejected by admin.';
@@ -158,15 +159,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['user_id'], $_POST['us
 }
 
 // Fetch all bookings
-$sql = "SELECT b.id AS booking_id, s.name AS service_name, u.username AS customer_name, b.service_date, b.status
-        FROM bookings b
-        JOIN services s ON b.service_id = s.id
-        JOIN users u ON b.customer_id = u.id
-        ORDER BY b.id DESC";
-$stmt = $conn->prepare($sql);
-$stmt->execute();
-$result = $stmt->get_result();
-
 // Fetch all services for listing
 $services = [];
 $result = $conn->query("SELECT id, name, description FROM services");
@@ -183,7 +175,7 @@ while ($row = $result->fetch_assoc()) {
 
 // Fetch provider-approved bookings (pending admin approval)
 $provider_approved_bookings = [];
-$sql = "SELECT b.id AS booking_id, s.name AS service_name, u.username AS customer_name, p.username AS provider_name, b.service_date, b.status
+$sql = "SELECT b.id AS booking_id, s.name AS service_name, u.username AS customer_name, p.username AS provider_name, b.service_date, b.status AS booking_status
         FROM bookings b
         JOIN services s ON b.service_id = s.id
         JOIN users u ON b.customer_id = u.id
@@ -198,15 +190,14 @@ while ($row = $result->fetch_assoc()) {
 }
 $stmt->close();
 
-// Fetch all admin and provider approved bookings (confirmed)
+// Fetch all bookings for status tracking
 $all_approved_bookings = [];
-$sql = "SELECT s.name AS service_name, u.username AS customer_name, p.username AS provider_name, b.service_date, b.status
+$sql = "SELECT b.id AS booking_id, s.name AS service_name, u.username AS customer_name, p.username AS provider_name, b.service_date, b.status AS booking_status
         FROM bookings b
         JOIN services s ON b.service_id = s.id
         JOIN users u ON b.customer_id = u.id
         JOIN users p ON b.provider_id = p.id
-        WHERE b.status = 'confirmed'
-        ORDER BY b.service_date DESC";
+        ORDER BY b.service_date DESC, b.id DESC";
 $stmt = $conn->prepare($sql);
 $stmt->execute();
 $result = $stmt->get_result();
@@ -265,6 +256,7 @@ while ($row = $result->fetch_assoc()) {
   <meta charset="UTF-8">
   <title>Admin Dashboard - Sewamandu</title>
   <link rel="stylesheet" href="../css/admin-dashboard.css">
+  <link rel="stylesheet" href="../css/booking-status.css">
 </head>
 <body>
   <div class="sidebar">
@@ -432,19 +424,24 @@ while ($row = $result->fetch_assoc()) {
     </tbody>
   </table>
 
-  <h3>Booking Management</h3>
+  <h3 id="booking">Booking Management</h3>
   <table>
     <thead>
-      <tr><th>Service</th><th>Customer</th><th>Provider</th><th>Date</th><th>Status</th><th>Actions</th></tr>
+      <tr><th>ID</th><th>Service</th><th>Customer</th><th>Provider</th><th>Date</th><th>Status</th><th>Actions</th></tr>
     </thead>
     <tbody>
       <?php foreach ($provider_approved_bookings as $row): ?>
       <tr>
+        <td><?= (int) $row['booking_id'] ?></td>
         <td><?= htmlspecialchars($row['service_name']) ?></td>
         <td><?= htmlspecialchars($row['customer_name']) ?></td>
         <td><?= htmlspecialchars($row['provider_name']) ?></td>
         <td><?= htmlspecialchars($row['service_date']) ?></td>
-        <td><?= htmlspecialchars($row['status']) ?></td>
+        <td>
+          <span class="<?= getBookingStatusBadgeClass($row['booking_status']) ?>">
+            <?= htmlspecialchars(getBookingStatusLabel($row['booking_status'])) ?>
+          </span>
+        </td>
         <td>
           <form method="POST" style="display:inline;">
             <input type="hidden" name="booking_id" value="<?= $row['booking_id'] ?>">
@@ -460,19 +457,24 @@ while ($row = $result->fetch_assoc()) {
     </tbody>
   </table>
 
-  <h3>All Approved Bookings</h3>
+  <h3>All Bookings</h3>
   <table>
     <thead>
-      <tr><th>Service</th><th>Customer</th><th>Provider</th><th>Date</th><th>Status</th></tr>
+      <tr><th>ID</th><th>Service</th><th>Customer</th><th>Provider</th><th>Date</th><th>Status</th></tr>
     </thead>
     <tbody>
       <?php foreach ($all_approved_bookings as $row): ?>
       <tr>
+        <td><?= (int) $row['booking_id'] ?></td>
         <td><?= htmlspecialchars($row['service_name']) ?></td>
         <td><?= htmlspecialchars($row['customer_name']) ?></td>
         <td><?= htmlspecialchars($row['provider_name']) ?></td>
         <td><?= htmlspecialchars($row['service_date']) ?></td>
-        <td><?= htmlspecialchars($row['status']) ?></td>
+        <td>
+          <span class="<?= getBookingStatusBadgeClass($row['booking_status']) ?>">
+            <?= htmlspecialchars(getBookingStatusLabel($row['booking_status'])) ?>
+          </span>
+        </td>
       </tr>
       <?php endforeach; ?>
     </tbody>

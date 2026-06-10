@@ -29,11 +29,12 @@ while ($row = $result->fetch_assoc()) {
 // Step 1: Show providers for selected service
 $providers = [];
 $show_providers = false;
-$service_id = $service_date = $address = '';
+$service_id = $service_date = $service_time = $address = '';
 
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['show_providers'])) {
     $service_id = intval($_POST['service_id']);
     $service_date = $_POST['date'];
+    $service_time = $_POST['time'] ?? '';
     $address = $_POST['address'];
     // Fetch providers for this service
     $stmt = $conn->prepare("SELECT u.id, u.username, sp.price, sp.availability FROM service_providers sp JOIN users u ON sp.user_id = u.id WHERE sp.service_id = ? AND sp.status = 'approved'");
@@ -53,12 +54,13 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['book_with_provider']))
     $service_id = intval($_POST['service_id']);
     $provider_id = intval($_POST['provider_id']);
     $service_date = $_POST['date'];
+    $service_time = $_POST['time'] ?? '';
     $address = $_POST['address'];
     $booking_date = date('Y-m-d');
     $status = 'pending_provider';
 
-    $stmt = $conn->prepare("INSERT INTO bookings (customer_id, service_id, status, booking_date, service_date, address, provider_id, served) VALUES (?, ?, ?, ?, ?, ?, ?, NULL)");
-    $stmt->bind_param("iissssi", $customer_id, $service_id, $status, $booking_date, $service_date, $address, $provider_id);
+    $stmt = $conn->prepare("INSERT INTO bookings (customer_id, service_id, status, booking_date, service_date, service_time, address, provider_id, served) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULL)");
+    $stmt->bind_param("iisssssi", $customer_id, $service_id, $status, $booking_date, $service_date, $service_time, $address, $provider_id);
     if ($stmt->execute()) {
         $message = "Booking request sent!";
     } else {
@@ -97,6 +99,17 @@ closeDBConnection($conn);
       <label for="date">Preferred Date:</label>
       <input type="date" id="date" name="date" value="<?= htmlspecialchars($service_date) ?>" required />
 
+      <label for="time">Preferred Time:</label>
+      <select id="time" name="time" required>
+        <option value="">--Choose--</option>
+        <?php for ($hour = 8; $hour <= 18; $hour++):
+          $time_value = sprintf('%02d:00', $hour);
+          $time_label = date('g:i A', strtotime($time_value));
+        ?>
+          <option value="<?= $time_value ?>" <?= ($service_time === $time_value) ? 'selected' : '' ?>><?= $time_label ?></option>
+        <?php endfor; ?>
+      </select>
+
       <label for="address">Your Address:</label>
       <textarea id="address" name="address" required><?= htmlspecialchars($address) ?></textarea>
 
@@ -109,6 +122,7 @@ closeDBConnection($conn);
         <form method="POST" action="">
           <input type="hidden" name="service_id" value="<?= $service_id ?>">
           <input type="hidden" name="date" value="<?= htmlspecialchars($service_date) ?>">
+          <input type="hidden" name="time" value="<?= htmlspecialchars($service_time) ?>">
           <input type="hidden" name="address" value="<?= htmlspecialchars($address) ?>">
           <label style="font-size: 1.2em; font-weight: 600; margin-bottom: 10px; display: block;">Select a Provider:</label>
           <div class="provider-cards">

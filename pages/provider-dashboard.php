@@ -4,6 +4,7 @@ ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
 require_once '../components/SessionManager.php';
 require_once '../components/Database.php';
+require_once '../components/BookingStatus.php';
 $all_services = [];
 if (session_status() === PHP_SESSION_NONE) {
 session_start();
@@ -175,22 +176,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_profile'])) {
 }
 
 // Handle marking booking as done or not done
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['done_booking_id'])) {
-    $booking_id = intval($_POST['done_booking_id']);
-    // Mark as served in a new table or update a field (here, let's use a 'served' field in bookings)
-    $stmt = $conn->prepare("UPDATE bookings SET served = 1 WHERE id = ?");
-    $stmt->bind_param("i", $booking_id);
-    $stmt->execute();
-    $stmt->close();
-    $message = 'Booking marked as served!';
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['completion_booking_id'], $_POST['completion_action'])) {
+    $booking_id = intval($_POST['completion_booking_id']);
+    $completion_action = $_POST['completion_action'];
+    $completed = $completion_action === 'done';
+
+    if ($booking_id > 0 && ($completion_action === 'done' || $completion_action === 'not_done')) {
+        $result = updateProviderBookingCompletion($conn, $booking_id, $provider_user_id, $completed);
+        $message = $result['message'];
+        header('Location: provider-dashboard.php?booking_msg=' . urlencode($message) . '#accepted-bookings');
+        exit();
+    }
+
+    $message = 'Invalid booking action.';
 }
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['not_done_booking_id'])) {
-    $booking_id = intval($_POST['not_done_booking_id']);
-    $stmt = $conn->prepare("UPDATE bookings SET served = 0 WHERE id = ?");
-    $stmt->bind_param("i", $booking_id);
-    $stmt->execute();
-    $stmt->close();
-    $message = 'Booking marked as not served!';
+
+if (isset($_GET['booking_msg'])) {
+    $message = $_GET['booking_msg'];
 }
 
 // Fetch provider profile from user_profiles
@@ -242,8 +244,8 @@ $result->bind_result($pending_requests);
 $result->fetch();
 $result->close();
 
-// Total Earnings (sum of price for confirmed bookings)
-$result = $conn->prepare("SELECT COALESCE(SUM(sp.price),0) FROM bookings b JOIN service_providers sp ON b.provider_id = sp.user_id AND b.service_id = sp.service_id WHERE b.provider_id = ? AND b.status = 'confirmed' AND sp.status = 'approved'");
+// Total Earnings (sum of price for completed bookings)
+$result = $conn->prepare("SELECT COALESCE(SUM(sp.price),0) FROM bookings b JOIN service_providers sp ON b.provider_id = sp.user_id AND b.service_id = sp.service_id WHERE b.provider_id = ? AND b.status = 'completed' AND sp.status = 'approved'");
 $result->bind_param("i", $provider_user_id);
 $result->execute();
 $result->bind_result($total_earnings);
@@ -252,12 +254,12 @@ $result->close();
 
 // Fetch only booking requests from customers (pending_provider) for this provider
 $customer_requests = [];
-$sql = "SELECT b.id AS booking_id, u.username AS customer_name, s.name AS service_name, b.service_date, b.status
+$sql = "SELECT b.id AS booking_id, u.username AS customer_name, s.name AS service_name, b.service_date, b.service_time, b.status
         FROM bookings b
         JOIN services s ON b.service_id = s.id
         JOIN users u ON b.customer_id = u.id
         WHERE b.provider_id = ? AND b.status = 'pending_provider'
-        ORDER BY b.service_date DESC";
+        ORDER BY b.service_date DESC, b.service_time DESC";
 $stmt = $conn->prepare($sql);
 $stmt->bind_param("i", $provider_user_id);
 $stmt->execute();
@@ -269,7 +271,7 @@ $stmt->close();
 
 // Fetch all bookings for this provider (any status)
 $accepted_bookings = [];
-$sql = "SELECT b.id AS booking_id, u.username AS customer_name, s.name AS service_name, b.service_date, b.status, b.served
+$sql = "SELECT b.id AS booking_id, u.username AS customer_name, s.name AS service_name, b.service_date, b.status AS booking_status, b.served
         FROM bookings b
         JOIN services s ON b.service_id = s.id
         JOIN users u ON b.customer_id = u.id
@@ -283,6 +285,14 @@ while ($row = $result->fetch_assoc()) {
     $accepted_bookings[] = $row;
 }
 $stmt->close();
+
+function formatBookingTime($service_time) {
+    if (empty($service_time)) {
+        return '—';
+    }
+    $timestamp = strtotime($service_time);
+    return $timestamp ? date('g:i A', $timestamp) : $service_time;
+}
 
 // Fetch provider info from users table
 $provider_info = ['username' => '', 'phone' => '', 'id' => $provider_user_id];
@@ -298,7 +308,7 @@ $stmt->close();
 
 // Fetch customers served (served=1)
 $customers_served = [];
-$sql = "SELECT u.username, u.email, s.name AS service_name FROM bookings b JOIN users u ON b.customer_id = u.id JOIN services s ON b.service_id = s.id WHERE b.provider_id = ? AND b.served = 1";
+$sql = "SELECT u.username, u.email, s.name AS service_name FROM bookings b JOIN users u ON b.customer_id = u.id JOIN services s ON b.service_id = s.id WHERE b.provider_id = ? AND b.status = 'completed'";
 $stmt = $conn->prepare($sql);
 $stmt->bind_param("i", $provider_user_id);
 $stmt->execute();
@@ -339,6 +349,11 @@ $stmt->close();
     <div class="main-content">
       <header>
         <h1 class= "headhead">Welcome, Provider</h1>
+        <?php if ($message): ?>
+          <p style="color: <?= strpos($message, 'Could not') === false && strpos($message, 'Invalid') === false ? 'green' : 'red' ?>; margin-top: 10px;">
+            <?= htmlspecialchars($message) ?>
+          </p>
+        <?php endif; ?>
       </header>
 
       <section id="overview">
@@ -367,7 +382,7 @@ $stmt->close();
         <h3>Manage Bookings</h3>
         <table>
           <thead>
-            <tr><th>Customer</th><th>Service</th><th>Date</th><th>Status</th><th>Actions</th></tr>
+            <tr><th>Customer</th><th>Service</th><th>Date</th><th>Time</th><th>Status</th><th>Actions</th></tr>
           </thead>
           <tbody>
           <?php foreach ($customer_requests as $row): ?>
@@ -375,8 +390,9 @@ $stmt->close();
               <td><?= htmlspecialchars($row['customer_name']) ?></td>
               <td><?= htmlspecialchars($row['service_name']) ?></td>
               <td><?= htmlspecialchars($row['service_date']) ?></td>
+              <td><?= htmlspecialchars(formatBookingTime($row['service_time'])) ?></td>
               <td>
-                <span class="status-badge status-pending-provider">Waiting for Provider</span>
+                <span class="<?= getBookingStatusBadgeClass($row['status']) ?>"><?= htmlspecialchars(getBookingStatusLabel($row['status'])) ?></span>
               </td>
               <td>
                 <form method="POST" style="display:inline;">
@@ -480,44 +496,13 @@ $stmt->close();
                 <td><?= htmlspecialchars($row['service_name']) ?></td>
                 <td><?= htmlspecialchars($row['service_date']) ?></td>
                 <td>
-                  <?php
-                    $status = $row['status'];
-                    $statusClass = '';
-                    switch ($status) {
-                      case 'pending_provider':
-                        $statusClass = 'status-badge status-pending-provider';
-                        $statusText = 'Waiting for Provider';
-                        break;
-                      case 'pending_admin':
-                        $statusClass = 'status-badge status-pending-admin';
-                        $statusText = 'Waiting for Admin';
-                        break;
-                      case 'confirmed':
-                        $statusClass = 'status-badge status-confirmed';
-                        $statusText = 'Confirmed';
-                        break;
-                      case 'rejected_by_provider':
-                        $statusClass = 'status-badge status-rejected';
-                        $statusText = 'Rejected by Provider';
-                        break;
-                      case 'rejected_by_admin':
-                        $statusClass = 'status-badge status-rejected';
-                        $statusText = 'Rejected by Admin';
-                        break;
-                      default:
-                        $statusClass = 'status-badge';
-                        $statusText = ucfirst($status);
-                    }
-                  ?>
-                  <span class="<?= $statusClass ?>"><?= $statusText ?></span>
-                  <?php if ($status === 'confirmed' && (!isset($row['served']) || $row['served'] === null)): ?>
-                    <form method="POST" style="display:inline;">
-                      <input type="hidden" name="done_booking_id" value="<?= $row['booking_id'] ?>">
-                      <button type="submit">Done</button>
-                    </form>
-                    <form method="POST" style="display:inline;">
-                      <input type="hidden" name="not_done_booking_id" value="<?= $row['booking_id'] ?>">
-                      <button type="submit">Not Done</button>
+                  <?php $status = $row['booking_status']; ?>
+                  <span class="<?= getBookingStatusBadgeClass($status) ?>"><?= htmlspecialchars(getBookingStatusLabel($status)) ?></span>
+                  <?php if ($status === 'confirmed'): ?>
+                    <form method="POST" action="provider-dashboard.php#accepted-bookings" style="display:inline;">
+                      <input type="hidden" name="completion_booking_id" value="<?= $row['booking_id'] ?>">
+                      <button type="submit" name="completion_action" value="done">Done</button>
+                      <button type="submit" name="completion_action" value="not_done">Not Done</button>
                     </form>
                   <?php endif; ?>
                 </td>
