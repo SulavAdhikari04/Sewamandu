@@ -312,7 +312,7 @@ $stmt->close();
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Provider Dashboard - GharSewa</title>
+  <title>Provider Dashboard - Sewamandu</title>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="../css/provider-dashboard.css" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
@@ -320,7 +320,7 @@ $stmt->close();
 <body>
   <div class="layout">
     <div class="sidebar">
-      <h2>GharSewa</h2>
+      <h2>Sewamandu</h2>
       <nav>
         <ul>
           <li><a href="#overview">Dashboard</a></li>
@@ -566,8 +566,8 @@ $stmt->close();
   </div>
   <footer class="footer">
     <div class="footer-container">
-      <p>&copy; 2025 GharSewa. All rights reserved.</p>
-      <p>Need help? Contact <a href="mailto:support@gharsewa.com">support@gharsewa.com</a></p>
+      <p>&copy; 2025 Sewamandu. All rights reserved.</p>
+      <p>Need help? Contact <a href="mailto:support@sewamandu.com">support@sewamandu.com</a></p>
     </div>
   </footer>
 </body>

@@ -263,12 +263,12 @@ while ($row = $result->fetch_assoc()) {
 <head>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
   <meta charset="UTF-8">
-  <title>Admin Dashboard - GharSewa</title>
+  <title>Admin Dashboard - Sewamandu</title>
   <link rel="stylesheet" href="../css/admin-dashboard.css">
 </head>
 <body>
   <div class="sidebar">
-    <h2>GharSewa</h2>
+    <h2>Sewamandu</h2>
     <nav>
       <ul>
         <li><a href="#overview">Dashboard</a></li>
@@ -285,7 +285,7 @@ while ($row = $result->fetch_assoc()) {
   </div>
   <div class="main-content">
   <header>
-    <h1>Welcome to GharSewa Admin Dashboard</h1>
+    <h1>Welcome to Sewamandu Admin Dashboard</h1>
   </header>
   <div class="container">
   <h2>Dashboard Overview</h2>

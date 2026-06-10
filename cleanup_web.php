@@ -1,7 +1,7 @@
 <?php
 /**
  * Web-accessible cleanup script for expired reset tokens
- * Access via: http://localhost/gharsewa/cleanup_web.php
+ * Access via: http://localhost/sewamandu/cleanup_web.php
  */
 
 // Simple authentication (you can modify this)
@@ -16,7 +16,7 @@ if (isset($_POST['password']) && $_POST['password'] === $admin_password) {
     echo "<!DOCTYPE html>
     <html>
     <head>
-        <title>Cleanup Expired Tokens - GharSewa</title>
+        <title>Cleanup Expired Tokens - Sewamandu</title>
         <style>
             body { font-family: Arial, sans-serif; margin: 40px; }
             .output { background: #f5f5f5; padding: 20px; border-radius: 5px; white-space: pre-wrap; }
@@ -39,7 +39,7 @@ if (isset($_POST['password']) && $_POST['password'] === $admin_password) {
     echo "<!DOCTYPE html>
     <html>
     <head>
-        <title>Cleanup Expired Tokens - GharSewa</title>
+        <title>Cleanup Expired Tokens - Sewamandu</title>
         <style>
             body { font-family: Arial, sans-serif; margin: 40px; }
             .form { margin: 20px 0; }

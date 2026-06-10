@@ -88,13 +88,13 @@ closeDBConnection($conn);
 <head>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
   <meta charset="UTF-8">
-  <title>Login - GharSewa</title>
+  <title>Login - Sewamandu</title>
   <link rel="stylesheet" href="../css/home.css">
 </head>
 <body>
   <header>
     <div class="container">
-      <a href="home.php"></s><h1>GharSewa </h1></a>
+      <a href="home.php"><h1>Sewamandu </h1></a>
     </div>
   </header>
   <section id="login" class="login-section">

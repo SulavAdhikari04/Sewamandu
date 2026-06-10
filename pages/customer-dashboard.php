@@ -111,13 +111,13 @@ closeDBConnection($conn);
 <head>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
   <meta charset="UTF-8">
-  <title>Customer Dashboard - GharSewa</title>
+  <title>Customer Dashboard - Sewamandu</title>
   <link rel="stylesheet" href="../css/customer-dashboard.css">
 </head>
 <body>
   <div class="layout">
     <div class="sidebar">
-      <a href="customer-home.php"> <h2>GharSewa</h2></a>
+      <a href="customer-home.php"> <h2>Sewamandu</h2></a>
       <nav>
         <ul>
           <li><a href="#overview">Dashboard</a></li>
@@ -221,8 +221,8 @@ closeDBConnection($conn);
   </div>
   <footer class="footer">
     <div class="footer-container">
-      <p>&copy; 2025 GharSewa. All rights reserved.</p>
-      <p>Need help? Contact <a href="mailto:support@gharsewa.com">support@gharsewa.com</a></p>
+      <p>&copy; 2025 Sewamandu. All rights reserved.</p>
+      <p>Need help? Contact <a href="mailto:support@sewamandu.com">support@sewamandu.com</a></p>
     </div>
   </footer>
 </body>

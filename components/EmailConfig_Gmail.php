@@ -1,6 +1,6 @@
 <?php
 /**
- * Email Configuration for GharSewa using Gmail SMTP
+ * Email Configuration for Sewamandu using Gmail SMTP
  * This version sends real emails via Gmail SMTP
  */
 
@@ -12,14 +12,14 @@ use PHPMailer\PHPMailer\Exception;
 require_once __DIR__ . '/../vendor/autoload.php';
 
 // Email configuration settings
-define('EMAIL_FROM', 'officialgharsewa@gmail.com'); // Your Gmail address
-define('EMAIL_FROM_NAME', 'GharSewa');
-define('EMAIL_REPLY_TO', 'officialgharsewa@gmail.com');
+define('EMAIL_FROM', 'officialsewamandu@gmail.com'); // Your Gmail address
+define('EMAIL_FROM_NAME', 'Sewamandu');
+define('EMAIL_REPLY_TO', 'officialsewamandu@gmail.com');
 
 // Gmail SMTP Configuration
 define('SMTP_HOST', 'smtp.gmail.com');
 define('SMTP_PORT', 587);
-define('SMTP_USERNAME', 'officialgharsewa@gmail.com'); // Your Gmail address
+define('SMTP_USERNAME', 'officialsewamandu@gmail.com'); // Your Gmail address
 define('SMTP_PASSWORD', 'kuugrcejbltwnhrh'); // Your Gmail app password
 define('USE_SMTP', true);
 
@@ -78,12 +78,12 @@ function sendEmail($to, $subject, $message, $html_message = '') {
  */
 function generatePasswordResetEmail($username, $reset_link) {
     $text_message = "Hello $username,\n\n";
-    $text_message .= "You have requested to reset your password for your GharSewa account.\n\n";
+    $text_message .= "You have requested to reset your password for your Sewamandu account.\n\n";
     $text_message .= "Click the following link to reset your password:\n";
     $text_message .= $reset_link . "\n\n";
     $text_message .= "This link will remain valid until used.\n\n";
     $text_message .= "If you didn't request this password reset, please ignore this email.\n\n";
-    $text_message .= "Best regards,\nGharSewa Team";
+    $text_message .= "Best regards,\nSewamandu Team";
     
     $html_message = "
     <!DOCTYPE html>
@@ -91,7 +91,7 @@ function generatePasswordResetEmail($username, $reset_link) {
     <head>
         <meta charset='UTF-8'>
         <meta name='viewport' content='width=device-width, initial-scale=1.0'>
-        <title>Password Reset - GharSewa</title>
+        <title>Password Reset - Sewamandu</title>
         <style>
             * {
                 margin: 0;
@@ -287,7 +287,7 @@ function generatePasswordResetEmail($username, $reset_link) {
     <body>
         <div class='email-container'>
             <div class='header'>
-                <h1>GharSewa</h1>
+                <h1>Sewamandu</h1>
                 <h2>Password Reset Request</h2>
             </div>
             
@@ -295,7 +295,7 @@ function generatePasswordResetEmail($username, $reset_link) {
                 <div class='greeting'>Hello $username,</div>
                 
                 <div class='description'>
-                    You have requested to reset your password for your GharSewa account. 
+                    You have requested to reset your password for your Sewamandu account. 
                     We're here to help you get back into your account securely.
                 </div>
                 
@@ -321,7 +321,7 @@ function generatePasswordResetEmail($username, $reset_link) {
             
             <div class='footer'>
                 <p>Best regards,<br>
-                <span class='team-name'>GharSewa Team</span></p>
+                <span class='team-name'>Sewamandu Team</span></p>
             </div>
         </div>
     </body>
@@ -339,7 +339,7 @@ function generatePasswordResetEmail($username, $reset_link) {
  * @return string Email subject
  */
 function getPasswordResetSubject() {
-    return "Password Reset Request - GharSewa";
+    return "Password Reset Request - Sewamandu";
 }
 
 /**
@@ -349,10 +349,10 @@ function getPasswordResetSubject() {
  * @return array Array with 'success' boolean and 'message' string
  */
 function testEmailConfiguration($test_email) {
-    $subject = "Test Email - GharSewa";
+    $subject = "Test Email - Sewamandu";
     $text_message = "This is a test email to verify email functionality is working.\n\n";
     $text_message .= "If you received this email, the email configuration is working correctly.\n\n";
-    $text_message .= "Best regards,\nGharSewa Team";
+    $text_message .= "Best regards,\nSewamandu Team";
     
     $html_message = "
     <!DOCTYPE html>
@@ -360,7 +360,7 @@ function testEmailConfiguration($test_email) {
     <head>
         <meta charset='UTF-8'>
         <meta name='viewport' content='width=device-width, initial-scale=1.0'>
-        <title>Test Email - GharSewa</title>
+        <title>Test Email - Sewamandu</title>
         <style>
             * {
                 margin: 0;
@@ -510,13 +510,13 @@ function testEmailConfiguration($test_email) {
                 </div>
                 
                 <div class='description'>
-                    Your GharSewa application is now ready to send password reset emails and other notifications.
+                    Your Sewamandu application is now ready to send password reset emails and other notifications.
                 </div>
             </div>
             
             <div class='footer'>
                 <p>Best regards,<br>
-                <span class='team-name'>GharSewa Team</span></p>
+                <span class='team-name'>Sewamandu Team</span></p>
             </div>
         </div>
     </body>
@@ -547,15 +547,15 @@ function generateWelcomeEmail($username, $role) {
             $role_description = 'You have administrative access to manage the platform, users, and services.';
             break;
         default:
-            $role_description = 'Welcome to GharSewa!';
+            $role_description = 'Welcome to Sewamandu!';
     }
     
-    $text_message = "Welcome to GharSewa, $username!\n\n";
+    $text_message = "Welcome to Sewamandu, $username!\n\n";
     $text_message .= "Thank you for joining our community. Your account has been successfully created.\n\n";
     $text_message .= "Role: $role_display\n";
     $text_message .= "$role_description\n\n";
     $text_message .= "You can now log in to your account and start using our services.\n\n";
-    $text_message .= "Best regards,\nGharSewa Team";
+    $text_message .= "Best regards,\nSewamandu Team";
     
     $html_message = "
     <!DOCTYPE html>
@@ -563,7 +563,7 @@ function generateWelcomeEmail($username, $role) {
     <head>
         <meta charset='UTF-8'>
         <meta name='viewport' content='width=device-width, initial-scale=1.0'>
-        <title>Welcome to GharSewa</title>
+        <title>Welcome to Sewamandu</title>
         <style>
             * {
                 margin: 0;
@@ -793,7 +793,7 @@ function generateWelcomeEmail($username, $role) {
         <div class='email-container'>
             <div class='header'>
                 <div class='welcome-icon'>🎉</div>
-                <h1>Welcome to GharSewa!</h1>
+                <h1>Welcome to Sewamandu!</h1>
                 <h2>Your account has been successfully created</h2>
             </div>
             
@@ -802,7 +802,7 @@ function generateWelcomeEmail($username, $role) {
                 
                 <div class='description'>
                     Thank you for joining our community! We're excited to have you on board. 
-                    Your account has been successfully created and you're now part of the GharSewa family.
+                    Your account has been successfully created and you're now part of the Sewamandu family.
                 </div>
                 
                 <div class='role-card'>
@@ -840,15 +840,15 @@ function generateWelcomeEmail($username, $role) {
                 
                 <div class='cta-section'>
                     <p style='margin-bottom: 15px; color: #666;'>Ready to get started?</p>
-                    <a href='http://localhost/gharsewa/pages/login.php' class='cta-button' style='color:white;' >Login to Your Account</a>
+                    <a href='http://localhost/sewamandu/pages/login.php' class='cta-button' style='color:white;' >Login to Your Account</a>
                 </div>
             </div>
             
             <div class='footer'>
                 <p>Best regards,<br>
-                <span class='team-name'>GharSewa Team</span></p>
+                <span class='team-name'>Sewamandu Team</span></p>
                 <div class='contact-info'>
-                    Need help? Contact us at support@gharsewa.com
+                    Need help? Contact us at support@sewamandu.com
                 </div>
             </div>
         </div>
@@ -867,7 +867,7 @@ function generateWelcomeEmail($username, $role) {
  * @return string Email subject
  */
 function getWelcomeEmailSubject() {
-    return "Welcome to GharSewa! 🎉";
+    return "Welcome to Sewamandu! 🎉";
 }
 
 /**

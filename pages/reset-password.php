@@ -91,13 +91,13 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && $token_valid) {
 <head>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
     <meta charset="UTF-8">
-    <title>Reset Password - GharSewa</title>
+    <title>Reset Password - Sewamandu</title>
     <link rel="stylesheet" href="../css/reset-password.css">
 </head>
 <body>
     <header>
         <div class="container">
-            <a href="home.php"><h1>GharSewa</h1></a>
+            <a href="home.php"><h1>Sewamandu</h1></a>
         </div>
     </header>
     

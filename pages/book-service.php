@@ -72,11 +72,11 @@ closeDBConnection($conn);
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Book a Service - GharSewa</title>
+  <title>Book a Service - Sewamandu</title>
   <link rel="stylesheet" href="../css/booking-style.css" />
 </head>
 <body>
-  <a href="customer-home.php" class="text-logo">GharSewa</a>
+  <a href="customer-home.php" class="text-logo">Sewamandu</a>
   <div class="container">
     <h1>Book a Service</h1>
     <?php if ($message): ?>

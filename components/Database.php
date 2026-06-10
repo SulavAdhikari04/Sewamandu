@@ -1,15 +1,24 @@
 <?php
 /**
  * Database Connection and Utility Functions
- * Reusable database functions for the GharSewa project
+ * Reusable database functions for the Sewamandu project
  */
 
 function getDBConnection() {
-    $conn = new mysqli("localhost", "root", "", "gharsewa");
-    if ($conn->connect_error) {
-        die("Connection failed: " . $conn->connect_error);
+    $database = "sewamandu";
+    try {
+        $conn = new mysqli("localhost", "root", "", $database);
+        return $conn;
+    } catch (mysqli_sql_exception $e) {
+        // Fallback to old name if 'sewamandu' doesn't exist
+        $database = "gharsewa";
+        try {
+            $conn = new mysqli("localhost", "root", "", $database);
+            return $conn;
+        } catch (mysqli_sql_exception $e2) {
+            die("Connection failed. Please ensure the database 'sewamandu' or 'gharsewa' exists. Error: " . $e2->getMessage());
+        }
     }
-    return $conn;
 }
 
 function closeDBConnection($conn) {

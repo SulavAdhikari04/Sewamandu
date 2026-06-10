@@ -1,6 +1,6 @@
-# GharSewa
+# Sewamandu
 
-GharSewa is a web-based platform for booking reliable home services in Kathmandu, Lalitpur, and Bhaktapur. It connects customers with verified service providers for a variety of household needs, including plumbing, electrical work, cleaning, carpentry, appliance repair, and more.
+Sewamandu is a web-based platform for booking reliable home services in Kathmandu, Lalitpur, and Bhaktapur. It connects customers with verified service providers for a variety of household needs, including plumbing, electrical work, cleaning, carpentry, appliance repair, and more.
 
 ## Features
 - Book home services online with ease
@@ -14,7 +14,7 @@ GharSewa is a web-based platform for booking reliable home services in Kathmandu
 
 ## Component-Based Project Structure
 ```
-gharsewa/
+sewamandu/
 │
 ├── components/           # Reusable PHP components (header, footer, sidebars, alerts)
 │   ├── Header.php
@@ -65,17 +65,17 @@ To use a component in a page:
 ## Installation
 1. Clone the repository:
    ```bash
-   git clone https://github.com/SulavAdhikari04/GharSewa.git
+   git clone https://github.com/SulavAdhikari04/Sewamandu.git
    ```
 2. Place the project in your XAMPP `htdocs` directory (or your web server root).
 3. Import the required MySQL database (see `register.php` and other PHP files for table structure).
 4. Update database credentials in PHP files if needed.
 5. Start Apache and MySQL from XAMPP.
-6. Access the app at `http://localhost/gharsewa/pages/home.php`.
+6. Access the app at `http://localhost/sewamandu/pages/home.php`.
 
 ## Contact
-- Email: support@gharsewa.com
+- Email: support@sewamandu.com
 - Phone: +977-9800000000
 
 ---
-© 2025 GharSewa. All rights reserved. 
+© 2025 Sewamandu. All rights reserved. 

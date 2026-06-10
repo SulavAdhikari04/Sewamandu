@@ -20,13 +20,13 @@ if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'customer') {
      <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
      <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
   <meta charset="UTF-8">
-  <title>GharSewa - Home Services at Your Doorstep</title>
+  <title>Sewamandu - Home Services at Your Doorstep</title>
   <link rel="stylesheet" href="../css/home.css">
 </head>
 <body>
   <header>
     <div class="container">
-      <h1>GharSewa</h1>
+      <h1>Sewamandu</h1>
       <nav>
         <a href="#services">Services</a>
         <a href="#booking">Book Now</a>
@@ -68,6 +68,7 @@ if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'customer') {
   </section>
 
   <section id="services" class="services">
+    <div id="booking"></div>
     <h3>Our Services</h3>
     <div class="service-list">
       <div class="card">🛠️ Plumbing</div>
@@ -93,7 +94,7 @@ if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'customer') {
   </section>
 
   <section class="stats">
-    <h2>Why Choose GharSewa?</h2>
+    <h2>Why Choose Sewamandu?</h2>
     <div class="stat-cards">
       <div class="stat"><i class="fas fa-user-check"></i><br>100% Verified Experts</div>
       <div class="stat"><i class="fas fa-clock"></i><br>24/7 Booking</div>
@@ -102,7 +103,7 @@ if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'customer') {
   </section>
 
   <section class="stats">
-    <h2>The GharSewa Difference</h2>
+    <h2>The Sewamandu Difference</h2>
     <div class="stat-cards extended">
       <div class="stat">
         <i class="fas fa-user-check fa-lg"></i>
@@ -141,13 +142,13 @@ if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'customer') {
   <section class="testimonials">
     <h3>What Our Customers Say</h3>
     <div class="card">"Great service and quick response!" - Aayush</div>
-    <div class="card">"Highly recommend GharSewa!" - Pratiksha</div>
+    <div class="card">"Highly recommend Sewamandu!" - Pratiksha</div>
   </section>
 
   <footer id="contact" class="footer">
     <div class="footer-container">
       <div class="footer-column">
-        <h4>GharSewa</h4>
+        <h4>Sewamandu</h4>
         <p>Reliable home services in Kathmandu, Lalitpur & Bhaktapur.</p>
       </div>
       <div class="footer-column">
@@ -161,7 +162,7 @@ if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'customer') {
       </div>
       <div class="footer-column">
         <h4>Contact Us</h4>
-        <p>Email: support@gharsewa.com</p>
+        <p>Email: support@sewamandu.com</p>
         <p>Phone: +977-9800000000</p>
         <div class="social-icons">
           <a href="#"><i class="fab fa-facebook-f"></i></a>
@@ -171,7 +172,7 @@ if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'customer') {
       </div>
     </div>
     <div class="footer-bottom">
-      <p>&copy; 2025 GharSewa. All rights reserved.</p>
+      <p>&copy; 2025 Sewamandu. All rights reserved.</p>
     </div>
   </footer>
   <script>

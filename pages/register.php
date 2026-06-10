@@ -8,6 +8,7 @@ require_once '../components/EmailConfig_Gmail.php';
 $conn = getDBConnection();
 
 $message = "";
+$error = [];
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $name = trim($_POST['name']);
@@ -78,7 +79,7 @@ closeDBConnection($conn);
 <head>
   <meta charset="UTF-8" />
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
-  <title>Register - GharSewa</title>
+  <title>Register - Sewamandu</title>
   <link rel="stylesheet" href="../css/register.css" />
 </head>
 <body>
@@ -128,7 +129,7 @@ closeDBConnection($conn);
       htmlspecialchars($message), 'success') !== false ? 'green' : 'red' ?>;">
       <?= htmlspecialchars($message) ?>
     </p>
-    <p>Already have an account? <a href="login.php">Login here</a></p>
+    <p>Already have an account? <a href="login.php">sign in here</a></p>
   </div>
   <script>
   document.getElementById('role').addEventListener('change', function() {
