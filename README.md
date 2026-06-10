@@ -68,7 +68,7 @@ sewamandu/
 1. **Clone the Repo**: `git clone https://github.com/SulavAdhikari04/sewamandu.git`
 2. **Environment**: Place in XAMPP `htdocs` or your web server root.
 3. **Database**: 
-   - Rename your MySQL database to `sewamandu` (or `gharsewa` for legacy support).
+   - Rename your MySQL database to `sewamandu`.
    - Update credentials in `components/Database.php`.
 4. **Start**: Launch Apache and MySQL, then visit `http://localhost/sewamandu/pages/home.php`.
 
