@@ -6,17 +6,17 @@ require_once '../components/SessionManager.php';
 require_once '../components/Database.php';
 require_once '../components/BookingStatus.php';
 
-// Add cookies
-setcookie('admin_dashboard_visited', 'true', time() + (86400 * 30), "/");
-setcookie('admin_user_id', $_SESSION['user_id'], time() + (86400 * 30), "/");
-
 if (session_status() === PHP_SESSION_NONE) {
-session_start();
+    session_start();
 }
 if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'admin') {
     header('Location: login.php');
     exit();
 }
+
+// Add cookies
+setcookie('admin_dashboard_visited', 'true', time() + (86400 * 30), "/");
+setcookie('admin_user_id', $_SESSION['user_id'], time() + (86400 * 30), "/");
 
 $conn = getDBConnection();
 if ($conn->connect_error) {
@@ -280,6 +280,16 @@ while ($row = $result->fetch_assoc()) {
     <h1>Welcome to Sewamandu Admin Dashboard</h1>
   </header>
   <div class="container">
+  <?php if ($message): ?>
+    <?php
+      $is_error = strpos($message, 'Error') === 0
+        || strpos($message, 'Please') === 0
+        || strpos($message, 'already exists') !== false;
+    ?>
+    <p style="color: <?= $is_error ? '#b00020' : 'green' ?>; margin-top: 10px;">
+      <?= htmlspecialchars($message) ?>
+    </p>
+  <?php endif; ?>
   <h2>Dashboard Overview</h2>
   <div class="stats-grid">
     <div class="card">👤 Users<br><strong><?= $total_users ?></strong></div>
@@ -310,14 +320,7 @@ while ($row = $result->fetch_assoc()) {
           <?php endif; ?>
         </td>
         <td>
-          <?php if ($user['role'] === 'provider' && $user['status'] === 'pending'): ?>
-            <form method="POST" style="display:inline;">
-              <input type="hidden" name="user_id" value="<?= $user['id'] ?>">
-              <button type="submit" name="user_action" value="approve">Approve</button>
-              <button type="submit" name="user_action" value="reject">Reject</button>
-            </form>
-          <?php endif; ?>
-          <form method="POST" style="display:inline; margin-left: 5px;">
+          <form method="POST" style="display:inline;">
             <input type="hidden" name="delete_user_id" value="<?= $user['id'] ?>">
             <button type="submit" onclick="return confirm('Are you sure you want to delete this user and all their data? This action cannot be undone.');" style="background-color: #dc3545; color: white; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer;">Remove</button>
           </form>
