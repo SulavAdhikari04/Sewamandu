@@ -17,12 +17,12 @@ Sewamandu is a web-based platform for booking reliable home services in Kathmand
 sewamandu/
 │
 ├── components/           # Reusable PHP components (header, footer, sidebars, alerts)
+│   ├── BookingStatus.php
 │   ├── Header.php
-│   ├── Footer.php
-│   ├── SidebarCustomer.php
-│   ├── SidebarProvider.php
-│   ├── SidebarAdmin.php
-│   └── Alert.php
+│   ├── Database.php
+│   ├── EmailConfig.php
+│   ├── Logout.php
+│   └── SessionManager.php
 │
 ├── pages/                # Main pages (each as a component)
 │   ├── home.php
