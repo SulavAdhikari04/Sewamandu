@@ -1,5 +1,40 @@
 <?php
 
+function getBlockingBookingStatuses() {
+    return [
+        'pending_provider',
+        'pending_admin',
+        'confirmed',
+    ];
+}
+
+function isProviderTimeSlotAvailable($conn, $provider_id, $service_date, $service_time) {
+    $statuses = getBlockingBookingStatuses();
+    $placeholders = implode(', ', array_fill(0, count($statuses), '?'));
+
+    $sql = "SELECT id FROM bookings
+            WHERE provider_id = ?
+              AND service_date = ?
+              AND service_time = ?
+              AND status IN ($placeholders)
+            LIMIT 1";
+
+    $stmt = $conn->prepare($sql);
+    if (!$stmt) {
+        return false;
+    }
+
+    $types = 'iss' . str_repeat('s', count($statuses));
+    $params = array_merge([$provider_id, $service_date, $service_time], $statuses);
+    $stmt->bind_param($types, ...$params);
+    $stmt->execute();
+    $stmt->store_result();
+    $available = $stmt->num_rows === 0;
+    $stmt->close();
+
+    return $available;
+}
+
 function getBookingStatusLabel($status) {
     switch ($status) {
         case 'pending_provider':

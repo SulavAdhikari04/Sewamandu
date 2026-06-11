@@ -4,6 +4,7 @@ ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
 require_once '../components/SessionManager.php';
 require_once '../components/Database.php';
+require_once '../components/BookingStatus.php';
 if (session_status() === PHP_SESSION_NONE) {
 session_start();
 }
@@ -13,6 +14,8 @@ if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'customer') {
 }
 $conn = getDBConnection();
 $message = "";
+$message_type = 'success';
+$no_providers_message = "Unfortunately, there are no providers available for your chosen date, time, or service at the moment. We'd recommend selecting an alternative slot or contacting support for assistance.";
 
 // Add cookies
 setcookie('book_service_visited', 'true', time() + (86400 * 30), "/");
@@ -42,7 +45,13 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['show_providers'])) {
     $stmt->execute();
     $res = $stmt->get_result();
     while ($row = $res->fetch_assoc()) {
-        $providers[] = $row;
+        if (isProviderTimeSlotAvailable($conn, $row['id'], $service_date, $service_time)) {
+            $providers[] = $row;
+        }
+    }
+    if (count($providers) === 0) {
+        $message = $no_providers_message;
+        $message_type = 'error';
     }
     $show_providers = true;
     $stmt->close();
@@ -59,14 +68,33 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['book_with_provider']))
     $booking_date = date('Y-m-d');
     $status = 'pending_provider';
 
-    $stmt = $conn->prepare("INSERT INTO bookings (customer_id, service_id, status, booking_date, service_date, service_time, address, provider_id, served) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULL)");
-    $stmt->bind_param("iisssssi", $customer_id, $service_id, $status, $booking_date, $service_date, $service_time, $address, $provider_id);
-    if ($stmt->execute()) {
-        $message = "Booking request sent!";
+    if (!isProviderTimeSlotAvailable($conn, $provider_id, $service_date, $service_time)) {
+        $message = 'This provider is already booked at the selected date and time. Please choose another provider or time slot.';
+        $message_type = 'error';
+        $show_providers = true;
+
+        $stmt = $conn->prepare("SELECT u.id, u.username, sp.price, sp.availability FROM service_providers sp JOIN users u ON sp.user_id = u.id WHERE sp.service_id = ? AND sp.status = 'approved'");
+        $stmt->bind_param("i", $service_id);
+        $stmt->execute();
+        $res = $stmt->get_result();
+        while ($row = $res->fetch_assoc()) {
+            if (isProviderTimeSlotAvailable($conn, $row['id'], $service_date, $service_time)) {
+                $providers[] = $row;
+            }
+        }
+        $stmt->close();
     } else {
-        $message = "Error: " . $stmt->error;
+        $stmt = $conn->prepare("INSERT INTO bookings (customer_id, service_id, status, booking_date, service_date, service_time, address, provider_id, served) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULL)");
+        $stmt->bind_param("iisssssi", $customer_id, $service_id, $status, $booking_date, $service_date, $service_time, $address, $provider_id);
+        if ($stmt->execute()) {
+            $message = "Booking request sent!";
+            $message_type = 'success';
+        } else {
+            $message = "Error: " . $stmt->error;
+            $message_type = 'error';
+        }
+        $stmt->close();
     }
-    $stmt->close();
 }
 closeDBConnection($conn);
 ?>
@@ -82,7 +110,7 @@ closeDBConnection($conn);
   <div class="container">
     <h1>Book a Service</h1>
     <?php if ($message): ?>
-      <p style="color: green; margin-top: 10px;">
+      <p style="color: <?= $message_type === 'error' ? '#b00020' : 'green' ?>; margin-top: 10px;">
         <?= htmlspecialchars($message) ?>
       </p>
     <?php endif; ?>
@@ -117,7 +145,9 @@ closeDBConnection($conn);
     </form>
     <?php elseif ($show_providers): ?>
       <?php if (count($providers) === 0): ?>
-        <p>No providers available for this service.</p>
+        <?php if (!$message): ?>
+          <p style="color: #b00020; margin-top: 10px;"><?= htmlspecialchars($no_providers_message) ?></p>
+        <?php endif; ?>
       <?php else: ?>
         <form method="POST" action="">
           <input type="hidden" name="service_id" value="<?= $service_id ?>">
