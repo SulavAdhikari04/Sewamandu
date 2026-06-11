@@ -7,13 +7,13 @@
 function getDBConnection() {
     $database = "sewamandu";
     try {
-        $conn = new mysqli("localhost", "root", "", $database);
+        $conn = new mysqli("127.0.0.1", "root", "", $database);
         return $conn;
     } catch (mysqli_sql_exception $e) {
         // Fallback to old name if 'sewamandu' doesn't exist
         $database = "gharsewa";
         try {
-            $conn = new mysqli("localhost", "root", "", $database);
+            $conn = new mysqli("127.0.0.1", "root", "", $database);
             return $conn;
         } catch (mysqli_sql_exception $e2) {
             die("Connection failed. Please ensure the database 'sewamandu' or 'gharsewa' exists. Error: " . $e2->getMessage());
