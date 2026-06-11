@@ -115,7 +115,7 @@ closeDBConnection($conn);
         <option value="">Select your role</option>
         <option value="customer">Customer</option>
         <option value="provider">Service Provider</option>
-        <option value="admin">Admin</option>
+        <!-- <option value="admin">Admin</option> -->
       </select>
 
       <div id="provider-doc-upload" style="display:none; margin-top:10px;">
