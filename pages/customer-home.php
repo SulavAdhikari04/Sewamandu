@@ -162,13 +162,8 @@ if ($conn) {
             ? 'book-service.php?service_id=' . (int) $svc['id']
             : 'book-service.php';
         ?>
-<<<<<<< HEAD
-        <a href="book-service.php" class="svc-card" style="text-decoration:none;">
-          <div class="ic"><i class="<?php echo $iconClass; ?>"></i></div>
-=======
         <a href="<?php echo $bookHref; ?>" class="svc-card" style="text-decoration:none;">
-          <div class="ic"><?php echo $icon; ?></div>
->>>>>>> fd226d6 (Theme customer dashboard and pre-select service from home cards)
+          <div class="ic"><i class="<?php echo $iconClass; ?>"></i></div>
           <h4><?php echo htmlspecialchars($display, ENT_QUOTES, 'UTF-8'); ?></h4>
         </a>
       <?php endforeach; ?>
