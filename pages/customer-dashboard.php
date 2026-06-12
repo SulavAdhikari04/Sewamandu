@@ -42,6 +42,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_review'])) {
     $booking_id = intval($_POST['booking_id']);
     $rating = intval($_POST['rating']);
     $comment = trim($_POST['comment']);
+    // Only the name is optional; defaults to anonymous unless customer opts in.
+    $show_name = isset($_POST['show_name']) ? 1 : 0;
     
     // Fetch booking to verify customer owns it and provider_id / service_id match
     $stmt = $conn->prepare("SELECT provider_id, service_id, status FROM bookings WHERE id = ? AND customer_id = ?");
@@ -70,8 +72,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_review'])) {
             $review_error_msg = "You have already reviewed this booking.";
         } else {
             // Insert review
-            $stmt = $conn->prepare("INSERT INTO reviews (booking_id, customer_id, provider_id, service_id, rating, comment) VALUES (?, ?, ?, ?, ?, ?)");
-            $stmt->bind_param("iiiiis", $booking_id, $user_id, $provider_id, $service_id, $rating, $comment);
+            $stmt = $conn->prepare("INSERT INTO reviews (booking_id, customer_id, provider_id, service_id, rating, comment, show_name) VALUES (?, ?, ?, ?, ?, ?, ?)");
+            $stmt->bind_param("iiiiisi", $booking_id, $user_id, $provider_id, $service_id, $rating, $comment, $show_name);
             if ($stmt->execute()) {
                 $stmt->close();
                 closeDBConnection($conn);
@@ -403,7 +405,15 @@ closeDBConnection($conn);
         </div>
 
         <label for="review-comment" style="display: block; margin-bottom: 8px; font-weight: 600; font-size: 0.9rem; color: #46564f;">Feedback & Experience:</label>
-        <textarea id="review-comment" name="comment" rows="4" placeholder="How was the service? What did you like or dislike?" style="width: 100%; padding: 14px; border: 1.5px solid #dbe7e3; border-radius: 12px; font-family: inherit; font-size: 0.95rem; background: #fff; resize: vertical; margin-bottom: 24px; outline: none; transition: border-color 0.4s var(--ease-soft);" required></textarea>
+        <textarea id="review-comment" name="comment" rows="4" placeholder="How was the service? What did you like or dislike?" style="width: 100%; padding: 14px; border: 1.5px solid #dbe7e3; border-radius: 12px; font-family: inherit; font-size: 0.95rem; background: #fff; resize: vertical; margin-bottom: 20px; outline: none; transition: border-color 0.4s var(--ease-soft);" required></textarea>
+
+        <label style="display: flex; align-items: flex-start; gap: 10px; margin-bottom: 24px; padding: 14px 16px; background: #f4faf8; border: 1.5px solid #dbe7e3; border-radius: 12px; cursor: pointer;">
+          <input type="checkbox" name="show_name" value="1" style="margin-top: 3px; width: 18px; height: 18px; accent-color: var(--teal); cursor: pointer; flex-shrink: 0;">
+          <span style="font-size: 0.9rem; color: #46564f; line-height: 1.45;">
+            <strong>Show my name to the provider</strong><br>
+            <span style="font-size: 0.82rem; color: #6b7d77;">Leave unchecked to post this review anonymously. Your rating and feedback are always shared, but your name stays hidden.</span>
+          </span>
+        </label>
 
         <button type="submit" name="submit_review" class="review-submit-btn">Submit Review</button>
       </form>

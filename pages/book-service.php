@@ -174,8 +174,7 @@ closeDBConnection($conn);
               <div class="cal-grid cal-dow"><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span><span>S</span></div>
               <div class="cal-grid cal-days" id="calDays"></div>
               <div class="cal-actions">
-                <button type="button" class="cal-btn ghost" id="calRemove">Remove</button>
-                <button type="button" class="cal-btn solid" id="calDone">Done</button>
+                <button type="button" class="cal-btn ghost" id="calRemove">Clear</button>
               </div>
             </div>
           </div>
@@ -272,7 +271,6 @@ closeDBConnection($conn);
       const calPrev = document.getElementById('calPrev');
       const calNext = document.getElementById('calNext');
       const calRemove = document.getElementById('calRemove');
-      const calDone = document.getElementById('calDone');
       const dateInput = document.getElementById('dateInput');
       const dateValueText = document.getElementById('dateValueText');
 
@@ -304,7 +302,7 @@ closeDBConnection($conn);
           if (date < minDate || date > maxDate) { cell.disabled = true; cell.classList.add('disabled'); }
           if (sameDay(date, today)) cell.classList.add('today');
           if (pending && sameDay(date, pending)) cell.classList.add('sel');
-          cell.addEventListener('click', () => { pending = date; renderCal(); });
+          cell.addEventListener('click', () => { commitDate(date); });
           calDays.appendChild(cell);
         }
         calPrev.disabled = new Date(view.getFullYear(), view.getMonth(), 0) < minDate;
@@ -322,15 +320,14 @@ closeDBConnection($conn);
         dateValueText.textContent = '— Choose a date —';
         dp.classList.remove('filled'); closeCal();
       });
-      calDone.addEventListener('click', () => {
-        if (pending) {
-          selected = new Date(pending);
-          dateInput.value = iso(selected);
-          dateValueText.textContent = selected.toLocaleDateString(undefined, { weekday:'short', day:'numeric', month:'short', year:'numeric' });
-          dp.classList.add('filled');
-        }
+      function commitDate(date) {
+        pending = date;
+        selected = new Date(date);
+        dateInput.value = iso(selected);
+        dateValueText.textContent = selected.toLocaleDateString(undefined, { weekday:'short', day:'numeric', month:'short', year:'numeric' });
+        dp.classList.add('filled');
         closeCal();
-      });
+      }
 
       /* ---------- Time picker (scroll list) ---------- */
       const tp = document.getElementById('timePicker');

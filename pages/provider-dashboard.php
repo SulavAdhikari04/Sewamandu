@@ -320,7 +320,9 @@ $stmt->close();
 
 // Fetch reviews for this provider
 $provider_reviews = [];
-$reviews_sql = "SELECT r.rating, r.comment, r.created_at, u.username AS customer_name, s.name AS service_name
+$reviews_sql = "SELECT r.rating, r.comment, r.created_at, r.show_name,
+                    CASE WHEN r.show_name = 1 THEN u.username ELSE 'Anonymous' END AS customer_name,
+                    s.name AS service_name
                 FROM reviews r
                 LEFT JOIN users u ON r.customer_id = u.id
                 LEFT JOIN services s ON r.service_id = s.id
@@ -541,7 +543,13 @@ $stmt->close();
           <tbody>
             <?php foreach ($provider_reviews as $row): ?>
               <tr>
-                <td><?= htmlspecialchars($row['customer_name']) ?></td>
+                <td>
+                  <?php if (!empty($row['show_name'])): ?>
+                    <?= htmlspecialchars($row['customer_name']) ?>
+                  <?php else: ?>
+                    <span style="color: #888; font-style: italic;"><i class="fas fa-user-secret"></i> Anonymous</span>
+                  <?php endif; ?>
+                </td>
                 <td><?= htmlspecialchars($row['service_name']) ?></td>
                 <td>
                   <span style="color: #ff9800;">
