@@ -389,17 +389,17 @@ closeDBConnection($conn);
         <input type="hidden" name="booking_id" id="modal-booking-id" value="">
         
         <label style="display: block; margin-bottom: 8px; font-weight: 600; font-size: 0.9rem; color: #46564f;">Your Rating:</label>
-        <div class="star-rating" style="margin-bottom: 24px; display: inline-flex; flex-direction: row-reverse; justify-content: flex-end; gap: 8px;">
+        <div class="star-rating" id="star-rating">
           <input type="radio" id="star5" name="rating" value="5" required />
-          <label for="star5" title="5 stars" style="font-size: 2.2rem; color: #dbe7e3; cursor: pointer; transition: color 0.2s;"><i class="fas fa-star"></i></label>
+          <label for="star5" title="5 stars"><i class="fas fa-star"></i></label>
           <input type="radio" id="star4" name="rating" value="4" />
-          <label for="star4" title="4 stars" style="font-size: 2.2rem; color: #dbe7e3; cursor: pointer; transition: color 0.2s;"><i class="fas fa-star"></i></label>
+          <label for="star4" title="4 stars"><i class="fas fa-star"></i></label>
           <input type="radio" id="star3" name="rating" value="3" />
-          <label for="star3" title="3 stars" style="font-size: 2.2rem; color: #dbe7e3; cursor: pointer; transition: color 0.2s;"><i class="fas fa-star"></i></label>
+          <label for="star3" title="3 stars"><i class="fas fa-star"></i></label>
           <input type="radio" id="star2" name="rating" value="2" />
-          <label for="star2" title="2 stars" style="font-size: 2.2rem; color: #dbe7e3; cursor: pointer; transition: color 0.2s;"><i class="fas fa-star"></i></label>
+          <label for="star2" title="2 stars"><i class="fas fa-star"></i></label>
           <input type="radio" id="star1" name="rating" value="1" />
-          <label for="star1" title="1 star" style="font-size: 2.2rem; color: #dbe7e3; cursor: pointer; transition: color 0.2s;"><i class="fas fa-star"></i></label>
+          <label for="star1" title="1 star"><i class="fas fa-star"></i></label>
         </div>
 
         <label for="review-comment" style="display: block; margin-bottom: 8px; font-weight: 600; font-size: 0.9rem; color: #46564f;">Feedback & Experience:</label>
@@ -429,26 +429,67 @@ const modalBookingId = document.getElementById('modal-booking-id');
 const modalServiceProvider = document.getElementById('modal-service-provider');
 const closeModalBtn = document.querySelector('.close-modal-btn');
 
+const starRating = document.getElementById('star-rating');
+const starInputs = starRating.querySelectorAll('input[type="radio"]');
+const starLabels = starRating.querySelectorAll('label');
+
+function updateStarHighlight(rating) {
+  starLabels.forEach(label => {
+    const value = parseInt(label.getAttribute('for').replace('star', ''), 10);
+    label.classList.toggle('active', rating > 0 && value <= rating);
+  });
+}
+
+function resetReviewForm() {
+  starInputs.forEach(input => { input.checked = false; });
+  document.getElementById('review-comment').value = '';
+  updateStarHighlight(0);
+}
+
+starLabels.forEach(label => {
+  label.addEventListener('mouseenter', () => {
+    updateStarHighlight(parseInt(label.getAttribute('for').replace('star', ''), 10));
+  });
+  label.addEventListener('click', () => {
+    updateStarHighlight(parseInt(label.getAttribute('for').replace('star', ''), 10));
+  });
+});
+
+starRating.addEventListener('mouseleave', () => {
+  const checked = starRating.querySelector('input[type="radio"]:checked');
+  updateStarHighlight(checked ? parseInt(checked.value, 10) : 0);
+});
+
+starInputs.forEach(input => {
+  input.addEventListener('change', () => {
+    updateStarHighlight(parseInt(input.value, 10));
+  });
+});
+
 document.querySelectorAll('.review-btn').forEach(btn => {
   btn.addEventListener('click', () => {
     const bookingId = btn.getAttribute('data-booking-id');
     const providerName = btn.getAttribute('data-provider-name');
     const serviceName = btn.getAttribute('data-service-name');
-    
+
+    resetReviewForm();
     modalBookingId.value = bookingId;
     modalServiceProvider.innerHTML = `<i class="fas fa-tools" style="color: var(--teal);"></i> <strong>${serviceName}</strong> by <strong>${providerName}</strong>`;
-    
+
     modal.style.display = 'flex';
   });
 });
 
-closeModalBtn.addEventListener('click', () => {
+function closeReviewModal() {
   modal.style.display = 'none';
-});
+  resetReviewForm();
+}
+
+closeModalBtn.addEventListener('click', closeReviewModal);
 
 window.addEventListener('click', (e) => {
   if (e.target === modal) {
-    modal.style.display = 'none';
+    closeReviewModal();
   }
 });
 </script>
