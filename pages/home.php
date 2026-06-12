@@ -26,12 +26,12 @@ $bookLink = isset($_SESSION['user_id'])
 
 // Emoji icon map so DB-driven services still get a nice icon.
 $serviceIcons = [
-    'plumbing' => '🛠️', 'electrical' => '💡', 'cleaning' => '🧼',
-    'carpentry' => '🪚', 'housekeeping' => '🧽', 'appliance repair' => '🔌',
-    'ac servicing' => '❄️', 'computer support' => '🖥️',
-    'packers & movers' => '📦', 'packers and movers' => '📦',
-    'home renovation' => '🏠', 'home shifting' => '🚚',
-    'painting' => '🎨', 'gardening' => '🌿',
+    'plumbing' => 'fas fa-wrench', 'electrical' => 'fas fa-bolt', 'cleaning' => 'fas fa-broom',
+    'carpentry' => 'fas fa-hammer', 'housekeeping' => 'fas fa-soap', 'appliance repair' => 'fas fa-plug',
+    'ac servicing' => 'fas fa-snowflake', 'computer support' => 'fas fa-laptop',
+    'packers & movers' => 'fas fa-box', 'packers and movers' => 'fas fa-box',
+    'home renovation' => 'fas fa-home', 'home shifting' => 'fas fa-truck',
+    'painting' => 'fas fa-paint-brush', 'gardening' => 'fas fa-seedling',
 ];
 
 // Fallback service set (used when DB is unavailable or empty)
@@ -176,11 +176,11 @@ if ($conn) {
       <?php foreach ($services as $svc): ?>
         <?php
           $name = $svc['name'];
-          $icon = $serviceIcons[strtolower(trim($name))] ?? '🧰';
+          $iconClass = $serviceIcons[strtolower(trim($name))] ?? 'fas fa-tools';
           $display = ucwords(strtolower(trim($name)));
         ?>
         <div class="svc-card">
-          <div class="ic"><?php echo $icon; ?></div>
+          <div class="ic"><i class="<?php echo $iconClass; ?>"></i></div>
           <h4><?php echo htmlspecialchars($display, ENT_QUOTES, 'UTF-8'); ?></h4>
         </div>
       <?php endforeach; ?>

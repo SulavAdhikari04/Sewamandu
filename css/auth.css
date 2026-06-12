@@ -74,9 +74,6 @@ body {
   letter-spacing: 0.5px;
   color: #fff;
   text-decoration: none;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
 }
 .auth-brand span { color: #4dd0c4; }
 
