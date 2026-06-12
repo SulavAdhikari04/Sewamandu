@@ -38,7 +38,7 @@ $stats = ['customers' => '10,000+', 'experts' => '100%', 'support' => '24/7'];
 
 $conn = getDBConnectionSafe();
 if ($conn) {
-    if ($res = $conn->query("SELECT name FROM services ORDER BY name ASC")) {
+    if ($res = $conn->query("SELECT id, name FROM services ORDER BY name ASC")) {
         $rows = $res->fetch_all(MYSQLI_ASSOC);
         if (!empty($rows)) { $services = $rows; }
         $res->free();
@@ -158,9 +158,17 @@ if ($conn) {
           $name = $svc['name'];
           $iconClass = $serviceIcons[strtolower(trim($name))] ?? 'fas fa-tools';
           $display = ucwords(strtolower(trim($name)));
+          $bookHref = isset($svc['id'])
+            ? 'book-service.php?service_id=' . (int) $svc['id']
+            : 'book-service.php';
         ?>
+<<<<<<< HEAD
         <a href="book-service.php" class="svc-card" style="text-decoration:none;">
           <div class="ic"><i class="<?php echo $iconClass; ?>"></i></div>
+=======
+        <a href="<?php echo $bookHref; ?>" class="svc-card" style="text-decoration:none;">
+          <div class="ic"><?php echo $icon; ?></div>
+>>>>>>> fd226d6 (Theme customer dashboard and pre-select service from home cards)
           <h4><?php echo htmlspecialchars($display, ENT_QUOTES, 'UTF-8'); ?></h4>
         </a>
       <?php endforeach; ?>

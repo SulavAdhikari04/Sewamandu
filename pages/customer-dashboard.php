@@ -110,23 +110,25 @@ closeDBConnection($conn);
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Customer Dashboard - Sewamandu</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../css/customer-dashboard.css">
   <link rel="stylesheet" href="../css/booking-status.css">
 </head>
 <body>
   <div class="layout">
     <div class="sidebar">
-      <a href="customer-home.php"> <h2>Sewamandu</h2></a>
+      <a href="customer-home.php"><h2>Sewa<span>mandu</span></h2></a>
       <nav>
         <ul>
-          <li><a href="#overview">Dashboard</a></li>
-          <li><a href="#bookings">Bookings</a></li>
-          <li><a href="#notifications">Notifications</a></li>
-          <li><a href="#reviews">My Reviews</a></li>
-          <li><a href="#profile">Profile</a></li>
+          <li><a href="#overview"><i class="fas fa-gauge-high"></i> Dashboard</a></li>
+          <li><a href="#bookings"><i class="fas fa-calendar-check"></i> Bookings</a></li>
+          <li><a href="#notifications"><i class="fas fa-bell"></i> Notifications</a></li>
+          <li><a href="#reviews"><i class="fas fa-star"></i> My Reviews</a></li>
+          <li><a href="#profile"><i class="fas fa-user"></i> Profile</a></li>
         </ul>
       </nav>
       <div style="margin-top: 30px;">

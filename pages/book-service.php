@@ -34,6 +34,11 @@ $providers = [];
 $show_providers = false;
 $service_id = $service_date = $service_time = $address = '';
 
+// Pre-select a service when arriving from a "Our Services" card (?service_id=)
+if ($_SERVER["REQUEST_METHOD"] !== "POST" && isset($_GET['service_id'])) {
+    $service_id = intval($_GET['service_id']);
+}
+
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['show_providers'])) {
     $service_id = intval($_POST['service_id']);
     $service_date = $_POST['date'];
