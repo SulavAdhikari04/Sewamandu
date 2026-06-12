@@ -192,11 +192,12 @@ $stmt->close();
 
 // Fetch all bookings for status tracking
 $all_approved_bookings = [];
-$sql = "SELECT b.id AS booking_id, s.name AS service_name, u.username AS customer_name, p.username AS provider_name, b.service_date, b.status AS booking_status
+$sql = "SELECT b.id AS booking_id, s.name AS service_name, u.username AS customer_name, p.username AS provider_name, b.service_date, b.status AS booking_status, r.rating AS review_rating, r.comment AS review_comment
         FROM bookings b
         JOIN services s ON b.service_id = s.id
         JOIN users u ON b.customer_id = u.id
         JOIN users p ON b.provider_id = p.id
+        LEFT JOIN reviews r ON b.id = r.booking_id
         ORDER BY b.service_date DESC, b.id DESC";
 $stmt = $conn->prepare($sql);
 $stmt->execute();
@@ -255,7 +256,7 @@ while ($row = $result->fetch_assoc()) {
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
   <meta charset="UTF-8">
   <title>Admin Dashboard - Sewamandu</title>
-  <link rel="stylesheet" href="../css/admin-dashboard.css">
+  <link rel="stylesheet" href="../css/admin-dashboard.css?v=1.0.1">
   <link rel="stylesheet" href="../css/booking-status.css">
 </head>
 <body>
@@ -460,7 +461,7 @@ while ($row = $result->fetch_assoc()) {
   <h3>All Bookings</h3>
   <table>
     <thead>
-      <tr><th>ID</th><th>Service</th><th>Customer</th><th>Provider</th><th>Date</th><th>Status</th></tr>
+      <tr><th>ID</th><th>Service</th><th>Customer</th><th>Provider</th><th>Date</th><th>Status</th><th>Reviews</th></tr>
     </thead>
     <tbody>
       <?php foreach ($all_approved_bookings as $row): ?>
@@ -475,6 +476,20 @@ while ($row = $result->fetch_assoc()) {
             <?= htmlspecialchars(getBookingStatusLabel($row['booking_status'])) ?>
           </span>
         </td>
+        <td>
+          <?php if ($row['booking_status'] === 'completed' && isset($row['review_rating'])): ?>
+            <button class="show-review-btn" 
+                    data-customer="<?= htmlspecialchars($row['customer_name']) ?>"
+                    data-rating="<?= (int) $row['review_rating'] ?>"
+                    data-feedback="<?= htmlspecialchars($row['review_comment']) ?>">
+              Show Review
+            </button>
+          <?php elseif ($row['booking_status'] === 'completed'): ?>
+            <span style="color: #888; font-style: italic;">No Review</span>
+          <?php else: ?>
+            <span style="color: #888;">—</span>
+          <?php endif; ?>
+        </td>
       </tr>
       <?php endforeach; ?>
     </tbody>
@@ -485,5 +500,76 @@ while ($row = $result->fetch_assoc()) {
   <button onclick="alert('Export functionality will be implemented soon!')">Download Bookings CSV</button> -->
 </div>
 </div>
+
+<!-- Review View Modal for Admin -->
+<div id="admin-review-modal" class="modal">
+  <div class="modal-content">
+    <span class="close-modal-btn">&times;</span>
+    <h3 style="margin: 0 0 16px; font-size: 1.4rem; color: #004d40;">
+      🔍 Booking Review Details
+    </h3>
+    <div class="review-details-container">
+      <p style="margin: 8px 0; font-size: 0.95rem; color: #555;">
+        <strong>Customer:</strong> <span id="modal-customer-name">—</span>
+      </p>
+      <div style="margin: 16px 0 8px;">
+        <strong style="display: block; margin-bottom: 6px; font-size: 0.95rem; color: #555;">Rating:</strong>
+        <span id="modal-rating-stars" class="review-stars"></span>
+        <span id="modal-rating-value" style="font-size: 0.9rem; color: #666; margin-left: 6px;"></span>
+      </div>
+      <div style="margin: 16px 0 8px;">
+        <strong style="display: block; margin-bottom: 6px; font-size: 0.95rem; color: #555;">Feedback:</strong>
+        <p id="modal-feedback-text" style="margin: 0; padding: 12px 16px; background: #f4faf8; border-radius: 8px; border-left: 4px solid #00796b; font-style: italic; color: #2d3b38; font-size: 0.95rem; line-height: 1.5;"></p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const modal = document.getElementById('admin-review-modal');
+  const closeModalBtn = modal.querySelector('.close-modal-btn');
+  const customerNameElem = document.getElementById('modal-customer-name');
+  const ratingStarsElem = document.getElementById('modal-rating-stars');
+  const ratingValueElem = document.getElementById('modal-rating-value');
+  const feedbackTextElem = document.getElementById('modal-feedback-text');
+
+  // Handle clicking on Show Review button
+  document.querySelectorAll('.show-review-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+      const customer = this.getAttribute('data-customer') || '—';
+      const rating = parseInt(this.getAttribute('data-rating')) || 0;
+      const feedback = this.getAttribute('data-feedback') || 'No comment provided.';
+
+      customerNameElem.textContent = customer;
+      
+      // Render stars
+      let starsHTML = '';
+      for (let i = 1; i <= 5; i++) {
+        starsHTML += i <= rating ? '★' : '☆';
+      }
+      ratingStarsElem.textContent = starsHTML;
+      ratingValueElem.textContent = `(${rating}/5)`;
+
+      feedbackTextElem.textContent = feedback;
+
+      modal.style.display = 'flex';
+    });
+  });
+
+  // Close modal when clicking close button
+  closeModalBtn.addEventListener('click', function() {
+    modal.style.display = 'none';
+  });
+
+  // Close modal when clicking outside of it
+  window.addEventListener('click', function(event) {
+    if (event.target === modal) {
+      modal.style.display = 'none';
+    }
+  });
+});
+</script>
+
 </body>
 </html>

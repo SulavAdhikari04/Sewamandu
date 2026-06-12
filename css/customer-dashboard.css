@@ -406,3 +406,22 @@ button:hover { transform: translateY(-2px); box-shadow: 0 16px 34px rgba(0, 137,
   box-shadow: 0 8px 24px rgba(0, 77, 64, 0.05) !important;
 }
 
+/* Review modal submit button */
+#review-modal .review-submit-btn {
+  width: 100%;
+  padding: 13px;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #fff;
+  background: linear-gradient(120deg, var(--teal), var(--teal-deep));
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  box-shadow: 0 10px 26px rgba(0, 137, 123, 0.25);
+  transition: transform 0.5s var(--ease-cinema), box-shadow 0.5s var(--ease-cinema);
+}
+#review-modal .review-submit-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 16px 34px rgba(0, 137, 123, 0.36);
+}
+

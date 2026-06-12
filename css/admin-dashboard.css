@@ -129,3 +129,71 @@ button:hover {
 .logout-btn:hover {
   background-color: #c62828;
 }
+
+/* Modal overlay and animations */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(30px) scale(0.96); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.modal {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(11, 31, 28, 0.65);
+  backdrop-filter: blur(8px);
+  z-index: 1000;
+  align-items: center;
+  justify-content: center;
+  animation: fadeIn 0.3s ease-out;
+}
+
+.modal-content {
+  background: #ffffff;
+  width: 90%;
+  max-width: 500px;
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+  position: relative;
+  animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.close-modal-btn {
+  position: absolute;
+  top: 15px;
+  right: 20px;
+  font-size: 1.8rem;
+  cursor: pointer;
+  color: #888;
+  transition: color 0.2s;
+}
+
+.close-modal-btn:hover {
+  color: #ff5722;
+}
+
+.review-details-container {
+  margin-top: 15px;
+  text-align: left;
+}
+
+.review-stars {
+  color: #ff9800;
+  font-size: 1.4rem;
+}
+
+.show-review-btn {
+  background-color: #00897b;
+  font-size: 0.85rem;
+  padding: 6px 12px;
+  border-radius: 4px;
+  margin: 0;
+}
+.show-review-btn:hover {
+  background-color: #004d40;
+}

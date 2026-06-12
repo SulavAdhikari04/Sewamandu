@@ -405,7 +405,7 @@ closeDBConnection($conn);
         <label for="review-comment" style="display: block; margin-bottom: 8px; font-weight: 600; font-size: 0.9rem; color: #46564f;">Feedback & Experience:</label>
         <textarea id="review-comment" name="comment" rows="4" placeholder="How was the service? What did you like or dislike?" style="width: 100%; padding: 14px; border: 1.5px solid #dbe7e3; border-radius: 12px; font-family: inherit; font-size: 0.95rem; background: #fff; resize: vertical; margin-bottom: 24px; outline: none; transition: border-color 0.4s var(--ease-soft);" required></textarea>
 
-        <button type="submit" name="submit_review" style="width: 100%; padding: 13px; font-size: 1rem; background: linear-gradient(120deg, var(--teal), var(--teal-deep)); box-shadow: 0 10px 26px rgba(0, 137, 123, 0.25);">Submit Review</button>
+        <button type="submit" name="submit_review" class="review-submit-btn">Submit Review</button>
       </form>
     </div>
   </div>
