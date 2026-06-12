@@ -317,3 +317,92 @@ button:hover { transform: translateY(-2px); box-shadow: 0 16px 34px rgba(0, 137,
     transition-duration: 0.001ms !important;
   }
 }
+
+/* ============================================================
+   Sewamandu — Interactive Review System Additions
+   ============================================================ */
+
+/* Modal overlay and animations */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(30px) scale(0.96); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.modal {
+  display: flex;
+}
+
+.close-modal-btn:hover {
+  color: var(--accent) !important;
+}
+
+/* Star rating styles */
+.star-rating {
+  display: inline-flex;
+  flex-direction: row-reverse;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.star-rating input[type="radio"] {
+  display: none;
+}
+.star-rating label {
+  font-size: 2.2rem;
+  color: #dbe7e3;
+  cursor: pointer;
+  transition: color 0.2s ease-in-out, transform 0.15s ease;
+}
+.star-rating label:hover,
+.star-rating label:hover ~ label,
+.star-rating input[type="radio"]:checked ~ label {
+  color: #ff9800; /* Rich orange gold */
+}
+.star-rating label:active {
+  transform: scale(0.9);
+}
+
+/* Review buttons and badges */
+.review-btn {
+  background: linear-gradient(120deg, var(--teal), var(--teal-deep));
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 14px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 4px 10px rgba(0, 137, 123, 0.15);
+  transition: transform 0.2s, box-shadow 0.2s;
+  text-align: center;
+}
+.review-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 14px rgba(0, 137, 123, 0.25);
+}
+.reviewed-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background-color: #e8f5e9;
+  color: #2e7d32;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  border: 1px solid #c8e6c9;
+}
+
+/* Pending reviews cards */
+.pending-review-card {
+  transition: border-color 0.3s, transform 0.3s;
+}
+.pending-review-card:hover {
+  border-color: var(--teal) !important;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 77, 64, 0.05) !important;
+}
+

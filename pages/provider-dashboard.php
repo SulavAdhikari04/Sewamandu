@@ -317,6 +317,23 @@ while ($row = $result->fetch_assoc()) {
     $customers_served[] = $row;
 }
 $stmt->close();
+
+// Fetch reviews for this provider
+$provider_reviews = [];
+$reviews_sql = "SELECT r.rating, r.comment, r.created_at, u.username AS customer_name, s.name AS service_name
+                FROM reviews r
+                LEFT JOIN users u ON r.customer_id = u.id
+                LEFT JOIN services s ON r.service_id = s.id
+                WHERE r.provider_id = ?
+                ORDER BY r.created_at DESC";
+$stmt = $conn->prepare($reviews_sql);
+$stmt->bind_param("i", $provider_user_id);
+$stmt->execute();
+$reviews_result = $stmt->get_result();
+while ($row = $reviews_result->fetch_assoc()) {
+    $provider_reviews[] = $row;
+}
+$stmt->close();
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -514,14 +531,31 @@ $stmt->close();
 
       <section id="reviews">
         <h3>Customer Reviews</h3>
+        <?php if (empty($provider_reviews)): ?>
+          <p style="color: #666; font-style: italic;">No reviews received yet.</p>
+        <?php else: ?>
         <table>
           <thead>
-            <tr><th>Customer</th><th>Service</th><th>Rating</th><th>Comment</th></tr>
+            <tr><th>Customer</th><th>Service</th><th>Rating</th><th>Comment</th><th>Date</th></tr>
           </thead>
           <tbody>
-            <!-- Dynamically load reviews here. Remove mock data. -->
+            <?php foreach ($provider_reviews as $row): ?>
+              <tr>
+                <td><?= htmlspecialchars($row['customer_name']) ?></td>
+                <td><?= htmlspecialchars($row['service_name']) ?></td>
+                <td>
+                  <span style="color: #ff9800;">
+                    <?= str_repeat('★', $row['rating']) . str_repeat('☆', 5 - $row['rating']) ?>
+                  </span>
+                  (<?= htmlspecialchars($row['rating']) ?>/5)
+                </td>
+                <td><?= htmlspecialchars($row['comment']) ?></td>
+                <td style="font-size: 0.85rem; color: #666;"><?= htmlspecialchars(date('M d, Y', strtotime($row['created_at']))) ?></td>
+              </tr>
+            <?php endforeach; ?>
           </tbody>
         </table>
+        <?php endif; ?>
       </section>
 
       <section id="profile">
