@@ -8,6 +8,80 @@ function getBlockingBookingStatuses() {
     ];
 }
 
+function getBookableDateOptions($count = 14, $max_days_ahead = 30) {
+    $options = [];
+    $today = new DateTime('today');
+    $limit = min($count, $max_days_ahead + 1);
+
+    for ($i = 0; $i < $limit; $i++) {
+        $date = (clone $today)->modify("+{$i} days");
+        $options[] = [
+            'value' => $date->format('Y-m-d'),
+            'weekday' => $date->format('D'),
+            'day' => (int) $date->format('j'),
+            'month' => $date->format('M'),
+            'caption' => $i === 0 ? 'Today' : ($i === 1 ? 'Tomorrow' : $date->format('l')),
+        ];
+    }
+
+    return $options;
+}
+
+function getServiceTimeOptions($start_hour = 8, $end_hour = 18) {
+    $options = [];
+
+    for ($hour = $start_hour; $hour <= $end_hour; $hour++) {
+        $value = sprintf('%02d:00', $hour);
+        $options[] = [
+            'value' => $value,
+            'label' => date('g:i A', strtotime($value)),
+        ];
+    }
+
+    return $options;
+}
+
+function validateServiceDate($date, $max_days_ahead = 30) {
+    if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) {
+        return false;
+    }
+
+    $selected = DateTime::createFromFormat('Y-m-d', $date);
+    $errors = DateTime::getLastErrors();
+    if (
+        !$selected
+        || ($errors['warning_count'] ?? 0) > 0
+        || ($errors['error_count'] ?? 0) > 0
+    ) {
+        return false;
+    }
+
+    $today = new DateTime('today');
+    $max = (clone $today)->modify("+{$max_days_ahead} days");
+
+    return $selected >= $today && $selected <= $max;
+}
+
+function validateServiceTime($time, $start_hour = 8, $end_hour = 18) {
+    if (!preg_match('/^\d{2}:\d{2}$/', $time)) {
+        return false;
+    }
+
+    $hour = (int) substr($time, 0, 2);
+    $minute = (int) substr($time, 3, 2);
+
+    return $minute === 0 && $hour >= $start_hour && $hour <= $end_hour;
+}
+
+function formatServiceDateTime($date, $time) {
+    $date_time = DateTime::createFromFormat('Y-m-d H:i', $date . ' ' . $time);
+    if (!$date_time) {
+        return trim($date . ' ' . $time);
+    }
+
+    return $date_time->format('l, j M Y') . ' at ' . $date_time->format('g:i A');
+}
+
 function isProviderTimeSlotAvailable($conn, $provider_id, $service_date, $service_time) {
     $statuses = getBlockingBookingStatuses();
     $placeholders = implode(', ', array_fill(0, count($statuses), '?'));

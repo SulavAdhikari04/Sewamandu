@@ -1,0 +1,190 @@
+/* ============================================================
+   Sewamandu — Cinematic Book-a-Service theme
+   Centered glass card over a full-bleed parallax backdrop.
+   Reuses tokens & form primitives from auth.css (load both).
+   ============================================================ */
+
+body {
+  min-height: 100vh;
+  margin: 0;
+  font-family: 'Poppins', Arial, sans-serif;
+  color: var(--ink);
+  position: relative;
+  overflow-x: hidden;
+}
+
+/* Full-bleed cinematic backdrop */
+.book-bg {
+  position: fixed;
+  inset: 0;
+  z-index: -2;
+  background-image: url("../artifacts/kathmandu.jpg");
+  background-size: cover;
+  background-position: center;
+  transform: scale(1.08);
+  animation: bookZoom 26s var(--ease-soft) infinite alternate;
+}
+.book-bg::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(165deg, rgba(0, 77, 64, 0.82), rgba(3, 19, 17, 0.94)),
+             radial-gradient(80% 60% at 85% 100%, rgba(255, 87, 34, 0.22), transparent 60%);
+}
+@keyframes bookZoom {
+  from { transform: scale(1.08) translate3d(0,0,0); }
+  to   { transform: scale(1.16) translate3d(0,-12px,0); }
+}
+
+/* Top bar */
+.book-topbar {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 22px clamp(20px, 5vw, 54px);
+}
+.book-topbar .brand {
+  font-size: 1.45rem;
+  font-weight: 600;
+  color: #fff;
+  text-decoration: none;
+}
+.book-topbar .brand span { color: #4dd0c4; }
+.book-back {
+  color: #fff;
+  text-decoration: none;
+  font-size: 0.88rem;
+  padding: 9px 16px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  backdrop-filter: blur(8px);
+  transition: background 0.5s var(--ease-soft), transform 0.5s var(--ease-cinema);
+}
+.book-back:hover { background: rgba(255, 255, 255, 0.26); transform: translateY(-2px); }
+
+/* Centered layout */
+.book-wrap {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: clamp(20px, 4vw, 50px) 20px 60px;
+  min-height: calc(100vh - 90px);
+}
+
+.book-card {
+  width: 100%;
+  max-width: 620px;
+  background: rgba(255, 255, 255, 0.94);
+  backdrop-filter: blur(10px);
+  border: 1px solid #e4efeb;
+  border-radius: 26px;
+  padding: clamp(28px, 4vw, 46px);
+  box-shadow: 0 40px 90px rgba(0, 30, 26, 0.4);
+  animation: cardIn 1s var(--ease-cinema) both;
+}
+.book-head { text-align: center; margin-bottom: 28px; }
+.book-head .eyebrow {
+  display: inline-block;
+  font-size: 0.72rem;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  font-weight: 600;
+  color: var(--teal);
+}
+.book-head h1 {
+  font-size: clamp(1.7rem, 4vw, 2.4rem);
+  margin: 10px 0 6px;
+  color: var(--ink);
+}
+.book-head p { margin: 0; color: #5d6f6b; font-size: 0.96rem; }
+
+/* Textarea (extends auth field look) */
+.auth-field textarea {
+  width: 100%;
+  min-height: 96px;
+  resize: vertical;
+  padding: 14px 16px;
+  border: 1.5px solid #dbe7e3;
+  border-radius: 12px;
+  font-family: inherit;
+  font-size: 0.98rem;
+  color: var(--ink);
+  background: #fff;
+  transition: border-color 0.5s var(--ease-soft), box-shadow 0.5s var(--ease-soft);
+}
+.auth-field textarea::placeholder { color: #a9b8b3; }
+.auth-field textarea:focus {
+  outline: none;
+  border-color: var(--teal);
+  box-shadow: 0 0 0 4px rgba(0, 137, 123, 0.12);
+}
+
+/* Provider selection cards */
+.provider-label {
+  display: block;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--ink);
+  margin: 6px 0 14px;
+}
+.provider-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 14px;
+  margin-bottom: 26px;
+}
+.provider-card {
+  position: relative;
+  display: block;
+  padding: 20px 18px;
+  border: 1.5px solid #dbe7e3;
+  border-radius: 16px;
+  background: #fff;
+  cursor: pointer;
+  transition: border-color 0.5s var(--ease-soft), box-shadow 0.6s var(--ease-cinema), transform 0.6s var(--ease-cinema);
+}
+.provider-card:hover { transform: translateY(-4px); box-shadow: 0 18px 40px rgba(0, 77, 64, 0.12); }
+.provider-radio { position: absolute; opacity: 0; pointer-events: none; }
+.provider-card::after {
+  content: "";
+  position: absolute;
+  top: 14px; right: 14px;
+  width: 20px; height: 20px;
+  border: 2px solid #c4d8d2;
+  border-radius: 50%;
+  transition: border-color 0.4s var(--ease-soft), background 0.4s var(--ease-soft);
+}
+.provider-card:has(.provider-radio:checked) {
+  border-color: var(--teal);
+  box-shadow: 0 0 0 3px rgba(0, 137, 123, 0.15), 0 18px 40px rgba(0, 77, 64, 0.14);
+}
+.provider-card:has(.provider-radio:checked)::after {
+  border-color: var(--teal);
+  background: var(--teal) radial-gradient(circle, #fff 28%, transparent 30%);
+}
+.provider-name { font-weight: 600; font-size: 1.05rem; color: var(--ink); margin-bottom: 8px; padding-right: 26px; }
+.provider-price {
+  display: inline-block;
+  font-weight: 700;
+  color: var(--teal-deep);
+  background: rgba(0, 137, 123, 0.1);
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 0.9rem;
+  margin-bottom: 8px;
+}
+.provider-availability { font-size: 0.85rem; color: #6c7d78; }
+
+@media (max-width: 520px) {
+  .provider-cards { grid-template-columns: 1fr; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .book-bg { animation: none !important; transform: scale(1.08) !important; }
+  .book-card { animation: none !important; }
+}

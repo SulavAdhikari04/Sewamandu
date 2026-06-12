@@ -82,39 +82,85 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     }
 }
 closeDBConnection($conn);
+
+// Treat "success"/"successful" messages as positive, everything else as an error.
+$messageClass = (stripos($message, 'success') !== false) ? 'ok' : 'error';
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
   <meta charset="UTF-8">
-  <title>Login - Sewamandu</title>
-  <link rel="stylesheet" href="../css/home.css">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login — Sewamandu</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../css/auth.css">
 </head>
 <body>
-  <header>
-    <div class="container">
-      <a href="home.php"><h1>Sewamandu </h1></a>
-    </div>
-  </header>
-  <section id="login" class="login-section">
-    <h3>Login</h3>
-    <form id="login-form" method="POST" action="">
-      <label for="login-email">Email:</label>
-      <input type="email" id="login-email" name="email" placeholder="Enter your email" required>
+  <div class="auth-wrap">
 
-      <label for="login-password">Password:</label>
-      <input type="password" id="login-password" name="password" placeholder="Enter password" required >
+    <!-- Cinematic image panel -->
+    <aside class="auth-aside">
+      <div class="auth-aside__img" aria-hidden="true"></div>
+      <a href="home.php" class="auth-back"><i class="fas fa-arrow-left"></i> Back to home</a>
 
-      <label><input type="checkbox" name="remember"> Remember Me</label>
+      <a href="home.php" class="auth-brand">Sewa<span>mandu</span></a>
 
-      <button type="submit">Login</button>
-    </form>
-    <p style="color: <?= strpos($message, 'success') !== false ? 'green' : 'red' ?>; margin-top: 10px;">
-      <?= htmlspecialchars($message) ?>
-    </p>
-    <p>Don't have an account? <a href="register.php">Register here</a></p>
-    <p><a href="forgot-password.php">Forgot your password?</a></p>
-  </section>
+      <div class="auth-aside__copy">
+        <span class="eyebrow">Welcome back</span>
+        <h2>Your trusted home services,<br><span class="grad">just a login away</span></h2>
+        <p>Book vetted plumbers, electricians, cleaners and more across Kathmandu, Lalitpur &amp; Bhaktapur.</p>
+      </div>
+
+      <div class="auth-trust">
+        <div><div class="num">10,000+</div><div class="lbl">Happy Customers</div></div>
+        <div><div class="num">100%</div><div class="lbl">Verified Experts</div></div>
+        <div><div class="num">24/7</div><div class="lbl">Booking &amp; Support</div></div>
+      </div>
+    </aside>
+
+    <!-- Glass login form -->
+    <main class="auth-main">
+      <div class="auth-card">
+        <h3>Login</h3>
+        <p class="sub">Sign in to manage your bookings and services.</p>
+
+        <?php if (!empty($message)): ?>
+          <div class="auth-msg <?= $messageClass ?>"><?= htmlspecialchars($message) ?></div>
+        <?php endif; ?>
+
+        <form id="login-form" method="POST" action="">
+          <div class="auth-field">
+            <label for="login-email">Email</label>
+            <div class="input-shell">
+              <input type="email" id="login-email" name="email" placeholder="you@example.com" required>
+              <i class="fas fa-envelope"></i>
+            </div>
+          </div>
+
+          <div class="auth-field">
+            <label for="login-password">Password</label>
+            <div class="input-shell">
+              <input type="password" id="login-password" name="password" placeholder="Enter your password" required>
+              <i class="fas fa-lock"></i>
+            </div>
+          </div>
+
+          <div class="auth-row">
+            <label class="auth-remember"><input type="checkbox" name="remember"> Remember me</label>
+            <a href="forgot-password.php">Forgot password?</a>
+          </div>
+
+          <button type="submit" class="auth-btn">Login <i class="fas fa-arrow-right"></i></button>
+        </form>
+
+        <div class="auth-foot">
+          <div class="divider">New here?</div>
+          Don't have an account? <a href="register.php">Create one</a>
+        </div>
+      </div>
+    </main>
+
+  </div>
 </body>
 </html>

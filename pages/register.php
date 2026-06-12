@@ -78,67 +78,125 @@ closeDBConnection($conn);
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
-  <title>Register - Sewamandu</title>
-  <link rel="stylesheet" href="../css/register.css" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Register — Sewamandu</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../css/auth.css" />
 </head>
 <body>
-  <div class="login-container">
-    <h2>Register</h2>
-    <!-- Show Error Message Here -->
-    <!-- ✅ Show Error Messages -->
-      <?php
-        if (!empty($error)) {
-        foreach ($error as $err) {
-            echo '<div class="alert alert-danger">' . $err . '</div>';
-          }
-        }
-      ?>
-    <form id="register-form" method="POST" action="" enctype="multipart/form-data">
-      <label for="name">Full Name:</label>
-      <input type="text" id="name" name="name" placeholder="Enter your name" required />
+  <div class="auth-wrap">
 
-      <label for="email">Email:</label>
-      <input type="email" id="email" name="email" placeholder="Enter your email" required />
+    <!-- Cinematic image panel -->
+    <aside class="auth-aside">
+      <div class="auth-aside__img" aria-hidden="true"></div>
+      <a href="home.php" class="auth-back"><i class="fas fa-arrow-left"></i> Back to home</a>
 
-      <label for="phone">Phone Number:</label>
-      <input type="text" id="phone" name="phone" placeholder="Enter your phone number" pattern="98[0-9]{8}" title="Phone number must start with 98 and be 10 digits long" required />
+      <a href="home.php" class="auth-brand">Sewa<span>mandu</span></a>
 
-      <label for="password">Password:</label>
-      <input type="password" id="password" name="password" placeholder="Create a password" required minlength="8"/>
-
-      <label for="confirm-password">Confirm Password:</label>
-      <input type="password" id="confirm-password" name="confirm-password" placeholder="Re-enter password" required minlength="8"/>
-
-      <label for="role">I am a:</label>
-      <select id="role" name="role" required>
-        <option value="">Select your role</option>
-        <option value="customer">Customer</option>
-        <option value="provider">Service Provider</option>
-        <!-- <option value="admin">Admin</option> -->
-      </select>
-
-      <div id="provider-doc-upload" style="display:none; margin-top:10px;">
-        <label for="provider_document">Attach Document (for Providers):</label>
-        <input type="file" id="provider_document" name="provider_document" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx" />
+      <div class="auth-aside__copy">
+        <span class="eyebrow">Join us</span>
+        <h2>Create your account &amp;<br><span class="grad">get help in minutes</span></h2>
+        <p>Sign up as a customer to book trusted experts, or as a provider to grow your business across the valley.</p>
       </div>
 
-      <button type="submit">Register</button>
-    </form>
-    <p id="register-message" style="margin-top: 10px; color: <?= strpos(
-      htmlspecialchars($message), 'success') !== false ? 'green' : 'red' ?>;">
-      <?= htmlspecialchars($message) ?>
-    </p>
-    <p>Already have an account? <a href="login.php">sign in here</a></p>
+      <div class="auth-trust">
+        <div><div class="num">10,000+</div><div class="lbl">Happy Customers</div></div>
+        <div><div class="num">100%</div><div class="lbl">Verified Experts</div></div>
+        <div><div class="num">24/7</div><div class="lbl">Booking &amp; Support</div></div>
+      </div>
+    </aside>
+
+    <!-- Glass register form -->
+    <main class="auth-main">
+      <div class="auth-card auth-card--wide">
+        <h3>Create account</h3>
+        <p class="sub">It only takes a minute to get started.</p>
+
+        <?php if (!empty($error)): ?>
+          <?php foreach ($error as $err): ?>
+            <div class="auth-msg error"><?= htmlspecialchars($err) ?></div>
+          <?php endforeach; ?>
+        <?php endif; ?>
+
+        <?php if (!empty($message)): ?>
+          <div class="auth-msg <?= stripos($message, 'success') !== false ? 'ok' : 'error' ?>"><?= htmlspecialchars($message) ?></div>
+        <?php endif; ?>
+
+        <form id="register-form" method="POST" action="" enctype="multipart/form-data">
+          <div class="auth-field">
+            <label for="name">Full Name</label>
+            <div class="input-shell">
+              <input type="text" id="name" name="name" placeholder="Enter your name" required />
+              <i class="fas fa-user"></i>
+            </div>
+          </div>
+
+          <div class="auth-field">
+            <label for="email">Email</label>
+            <div class="input-shell">
+              <input type="email" id="email" name="email" placeholder="you@example.com" required />
+              <i class="fas fa-envelope"></i>
+            </div>
+          </div>
+
+          <div class="auth-field">
+            <label for="phone">Phone Number</label>
+            <div class="input-shell">
+              <input type="text" id="phone" name="phone" placeholder="98XXXXXXXX" pattern="98[0-9]{8}" title="Phone number must start with 98 and be 10 digits long" required />
+              <i class="fas fa-phone"></i>
+            </div>
+          </div>
+
+          <div class="auth-field">
+            <label for="password">Password</label>
+            <div class="input-shell">
+              <input type="password" id="password" name="password" placeholder="Create a password" required minlength="8" />
+              <i class="fas fa-lock"></i>
+            </div>
+          </div>
+
+          <div class="auth-field">
+            <label for="confirm-password">Confirm Password</label>
+            <div class="input-shell">
+              <input type="password" id="confirm-password" name="confirm-password" placeholder="Re-enter password" required minlength="8" />
+              <i class="fas fa-lock"></i>
+            </div>
+          </div>
+
+          <div class="auth-field">
+            <label for="role">I am a</label>
+            <div class="input-shell">
+              <select id="role" name="role" required>
+                <option value="">Select your role</option>
+                <option value="customer">Customer</option>
+                <option value="provider">Service Provider</option>
+              </select>
+              <i class="fas fa-id-badge"></i>
+            </div>
+          </div>
+
+          <div class="auth-file" id="provider-doc-upload" style="display:none;">
+            <label class="file-label" for="provider_document">Attach verification document (for providers)</label>
+            <input type="file" id="provider_document" name="provider_document" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx" />
+          </div>
+
+          <button type="submit" class="auth-btn" style="margin-top:6px;">Register <i class="fas fa-arrow-right"></i></button>
+        </form>
+
+        <div class="auth-foot">
+          <div class="divider">Already a member?</div>
+          Already have an account? <a href="login.php">Sign in here</a>
+        </div>
+      </div>
+    </main>
+
   </div>
+
   <script>
   document.getElementById('role').addEventListener('change', function() {
     var docUpload = document.getElementById('provider-doc-upload');
-    if (this.value === 'provider') {
-      docUpload.style.display = 'block';
-    } else {
-      docUpload.style.display = 'none';
-    }
+    docUpload.style.display = (this.value === 'provider') ? 'block' : 'none';
   });
   </script>
 </body>

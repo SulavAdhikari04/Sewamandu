@@ -75,73 +75,79 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Forgot Password - Sewamandu</title>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="../css/forgot-password.css">
+    <title>Forgot Password — Sewamandu</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="../css/auth.css">
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <div class="icon">
-                <i class="fas fa-lock"></i>
-            </div>
-            <h1>Forgot Password</h1>
-            <p>Don't worry, we'll help you reset it</p>
-        </div>
-        
-        <div class="content">
-            <div class="description">
-                <p>Enter your email address below and we'll send you a secure link to reset your password.</p>
-            </div>
-            
-            <?php if ($message): ?>
-                <div class="message <?= $message_type ?>">
-                    <i class="fas fa-<?= $message_type === 'success' ? 'check-circle' : 'exclamation-circle' ?>"></i>
-                    <?= htmlspecialchars($message) ?>
-                </div>
-            <?php endif; ?>
-            
-            <form method="POST" action="" id="forgotForm">
-                <div class="form-group">
-                    <label for="email">Email Address</label>
-                    <div class="input-wrapper">
-                        <i class="fas fa-envelope"></i>
-                        <input type="email" id="email" name="email" placeholder="Enter your email address" required>
-                    </div>
-                </div>
-                
-                <button type="submit" class="btn" id="submitBtn">
-                    <i class="fas fa-paper-plane"></i>
-                    <span class="btn-text">Send Reset Link</span>
-                    <i class="fas fa-spinner loading" id="loadingIcon"></i>
-                </button>
-            </form>
-            
-            <div class="back-link">
-                <a href="login.php">
-                    <i class="fas fa-arrow-left"></i>
-                    Back to Login
-                </a>
-            </div>
-        </div>
-        
-        <div class="footer">
-            <p>Need help? <a href="mailto:officialsewamandu@gmail.com">Contact Support</a></p>
-        </div>
-    </div>
+  <div class="auth-wrap">
 
-    <script>
-        document.getElementById('forgotForm').addEventListener('submit', function() {
-            const submitBtn = document.getElementById('submitBtn');
-            const btnText = submitBtn.querySelector('.btn-text');
-            const loadingIcon = document.getElementById('loadingIcon');
-            
-            // Show loading state
-            btnText.style.display = 'none';
-            loadingIcon.classList.add('show');
-            submitBtn.disabled = true;
-        });
-    </script>
+    <!-- Cinematic image panel -->
+    <aside class="auth-aside">
+      <div class="auth-aside__img" aria-hidden="true"></div>
+      <a href="login.php" class="auth-back"><i class="fas fa-arrow-left"></i> Back to login</a>
+
+      <a href="home.php" class="auth-brand">Sewa<span>mandu</span></a>
+
+      <div class="auth-aside__copy">
+        <span class="eyebrow">Account recovery</span>
+        <h2>Forgot your password?<br><span class="grad">we'll help you reset it</span></h2>
+        <p>Enter your email and we'll send a secure link to set a new password — you'll be back in no time.</p>
+      </div>
+
+      <div class="auth-trust">
+        <div><div class="num">10,000+</div><div class="lbl">Happy Customers</div></div>
+        <div><div class="num">100%</div><div class="lbl">Verified Experts</div></div>
+        <div><div class="num">24/7</div><div class="lbl">Booking &amp; Support</div></div>
+      </div>
+    </aside>
+
+    <!-- Glass form -->
+    <main class="auth-main">
+      <div class="auth-card">
+        <h3>Reset password</h3>
+        <p class="sub">Enter your email address and we'll send you a secure reset link.</p>
+
+        <?php if ($message): ?>
+          <div class="auth-msg <?= $message_type === 'success' ? 'ok' : 'error' ?>"><?= htmlspecialchars($message) ?></div>
+        <?php endif; ?>
+
+        <form method="POST" action="" id="forgotForm">
+          <div class="auth-field">
+            <label for="email">Email Address</label>
+            <div class="input-shell">
+              <input type="email" id="email" name="email" placeholder="you@example.com" required>
+              <i class="fas fa-envelope"></i>
+            </div>
+          </div>
+
+          <button type="submit" class="auth-btn" id="submitBtn">
+            <span class="btn-text">Send Reset Link</span>
+            <i class="fas fa-paper-plane"></i>
+            <span class="btn-spin" id="loadingIcon"></span>
+          </button>
+        </form>
+
+        <div class="auth-foot">
+          <div class="divider">Remembered it?</div>
+          <a href="login.php"><i class="fas fa-arrow-left"></i> Back to login</a>
+          <p style="margin-top:14px;">Need help? <a href="mailto:officialsewamandu@gmail.com">Contact Support</a></p>
+        </div>
+      </div>
+    </main>
+
+  </div>
+
+  <script>
+    document.getElementById('forgotForm').addEventListener('submit', function() {
+        const submitBtn = document.getElementById('submitBtn');
+        const btnText = submitBtn.querySelector('.btn-text');
+        const loadingIcon = document.getElementById('loadingIcon');
+        btnText.style.display = 'none';
+        loadingIcon.classList.add('show');
+        submitBtn.disabled = true;
+    });
+  </script>
 </body>
 </html> 

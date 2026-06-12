@@ -89,48 +89,75 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && $token_valid) {
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
     <meta charset="UTF-8">
-    <title>Reset Password - Sewamandu</title>
-    <link rel="stylesheet" href="../css/reset-password.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reset Password — Sewamandu</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../css/auth.css">
 </head>
 <body>
-    <header>
-        <div class="container">
-            <a href="home.php"><h1>Sewamandu</h1></a>
-        </div>
-    </header>
-    
-    <section class="reset-password-section">
+  <div class="auth-wrap">
+
+    <!-- Cinematic image panel -->
+    <aside class="auth-aside">
+      <div class="auth-aside__img" aria-hidden="true"></div>
+      <a href="login.php" class="auth-back"><i class="fas fa-arrow-left"></i> Back to login</a>
+
+      <a href="home.php" class="auth-brand">Sewa<span>mandu</span></a>
+
+      <div class="auth-aside__copy">
+        <span class="eyebrow">Almost there</span>
+        <h2>Set a new password &amp;<br><span class="grad">secure your account</span></h2>
+        <p>Choose a strong password you'll remember. Once updated, you can sign straight back in.</p>
+      </div>
+
+      <div class="auth-trust">
+        <div><div class="num">10,000+</div><div class="lbl">Happy Customers</div></div>
+        <div><div class="num">100%</div><div class="lbl">Verified Experts</div></div>
+        <div><div class="num">24/7</div><div class="lbl">Booking &amp; Support</div></div>
+      </div>
+    </aside>
+
+    <!-- Glass form -->
+    <main class="auth-main">
+      <div class="auth-card">
         <h3>Reset Password</h3>
-        
+        <p class="sub">Enter and confirm your new password below.</p>
+
         <?php if ($message): ?>
-            <div class="message <?= $message_type ?>">
-                <?= htmlspecialchars($message) ?>
-            </div>
+          <div class="auth-msg <?= $message_type === 'success' ? 'ok' : 'error' ?>"><?= htmlspecialchars($message) ?></div>
         <?php endif; ?>
-        
+
         <?php if ($token_valid): ?>
-            <p>Please enter your new password below.</p>
-            <form method="POST" action="">
-                <div class="form-group">
-                    <label for="password">New Password</label>
-                    <input type="password" id="password" name="password" placeholder="Enter new password" required>
-                    <div class="password-requirements">Password must be at least 6 characters long</div>
-                </div>
-                
-                <div class="form-group">
-                    <label for="confirm_password">Confirm New Password</label>
-                    <input type="password" id="confirm_password" name="confirm_password" placeholder="Confirm new password" required>
-                </div>
-                
-                <button type="submit">Reset Password</button>
-            </form>
+          <form method="POST" action="">
+            <div class="auth-field">
+              <label for="password">New Password</label>
+              <div class="input-shell">
+                <input type="password" id="password" name="password" placeholder="Enter new password" required>
+                <i class="fas fa-lock"></i>
+              </div>
+              <div class="field-hint">Password must be at least 6 characters long.</div>
+            </div>
+
+            <div class="auth-field">
+              <label for="confirm_password">Confirm New Password</label>
+              <div class="input-shell">
+                <input type="password" id="confirm_password" name="confirm_password" placeholder="Confirm new password" required>
+                <i class="fas fa-lock"></i>
+              </div>
+            </div>
+
+            <button type="submit" class="auth-btn">Reset Password <i class="fas fa-arrow-right"></i></button>
+          </form>
         <?php endif; ?>
-        
-        <div class="back-to-login">
-            <a href="login.php">Back to Login</a>
+
+        <div class="auth-foot">
+          <a href="login.php"><i class="fas fa-arrow-left"></i> Back to login</a>
         </div>
-    </section>
+      </div>
+    </main>
+
+  </div>
 </body>
 </html> 
