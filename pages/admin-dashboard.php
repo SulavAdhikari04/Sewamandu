@@ -278,7 +278,7 @@ while ($row = $result->fetch_assoc()) {
   </div>
   <div class="main-content">
   <header>
-    <h1>Welcome to Sewamandu Admin Dashboard</h1>
+    <h1>Welcome, Admin </h1>
   </header>
   <div class="container">
   <h2>Dashboard Overview</h2>
