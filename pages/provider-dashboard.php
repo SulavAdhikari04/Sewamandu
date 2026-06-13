@@ -24,6 +24,8 @@ $message = '';
 
 // Ensure the availability toggle column exists (MariaDB supports IF NOT EXISTS)
 $conn->query("ALTER TABLE users ADD COLUMN IF NOT EXISTS is_available TINYINT(1) NOT NULL DEFAULT 1");
+// Ensure the wallet balance column exists
+$conn->query("ALTER TABLE users ADD COLUMN IF NOT EXISTS wallet_balance DECIMAL(10,2) NOT NULL DEFAULT 0.00");
 
 // Add demonstration cookies
 setcookie('provider_dashboard_visited', 'true', time() + (86400 * 30), "/");
@@ -37,6 +39,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['toggle_availability']
     $stmt->execute();
     $stmt->close();
     $msg = $is_available ? 'You are now available for services.' : 'You are now unavailable. Customers will not see you for bookings.';
+    header('Location: provider-dashboard.php?booking_msg=' . urlencode($msg) . '#overview');
+    exit();
+}
+
+// Handle wallet top up
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['wallet_topup'])) {
+    $topup_amount = floatval($_POST['topup_amount']);
+    if ($topup_amount > 0) {
+        $stmt = $conn->prepare("UPDATE users SET wallet_balance = wallet_balance + ? WHERE id = ?");
+        $stmt->bind_param("di", $topup_amount, $provider_user_id);
+        $stmt->execute();
+        $stmt->close();
+        $msg = 'Wallet topped up with Rs. ' . number_format($topup_amount, 2) . '.';
+    } else {
+        $msg = 'Invalid top up amount.';
+    }
     header('Location: provider-dashboard.php?booking_msg=' . urlencode($msg) . '#overview');
     exit();
 }
@@ -312,14 +330,16 @@ function formatBookingTime($service_time) {
 // Fetch provider info from users table
 $provider_info = ['username' => '', 'phone' => '', 'id' => $provider_user_id];
 $is_available = 1;
-$stmt = $conn->prepare("SELECT username, phone, is_available FROM users WHERE id = ?");
+$wallet_balance = 0.00;
+$stmt = $conn->prepare("SELECT username, phone, is_available, wallet_balance FROM users WHERE id = ?");
 $stmt->bind_param("i", $provider_user_id);
 $stmt->execute();
-$stmt->bind_result($username, $phone, $availability_flag);
+$stmt->bind_result($username, $phone, $availability_flag, $balance_value);
 if ($stmt->fetch()) {
     $provider_info['username'] = $username;
     $provider_info['phone'] = $phone;
     $is_available = (int)$availability_flag;
+    $wallet_balance = (float)$balance_value;
 }
 $stmt->close();
 
@@ -411,6 +431,92 @@ $stmt->close();
             <span class="switch-text"><?= $is_available ? 'ON' : 'OFF' ?></span>
           </form>
         </div>
+
+        <div class="wallet-bar">
+          <div class="wallet-bar-head">
+            <div class="wallet-bar-left">
+              <h2 class="wallet-bar-title">Wallet</h2>
+              <span class="wallet-bar-sub">Total Balance</span>
+            </div>
+            <div class="wallet-bar-right">
+              <div class="wallet-bar-amount-row">
+                <span class="wallet-bar-amount" id="walletAmount" data-balance="Rs.<?= number_format($wallet_balance, 2) ?>">Rs.<?= number_format($wallet_balance, 2) ?></span>
+                <span class="wallet-eye" onclick="toggleWalletBalance()" title="Show / hide balance">
+                  <i class="fa-regular fa-eye" id="walletEyeIcon"></i>
+                </span>
+              </div>
+              <a href="#" class="wallet-bar-topup" onclick="openWalletModal(event)">
+                <i class="fa-solid fa-arrow-up"></i> Top Up
+              </a>
+            </div>
+          </div>
+        </div>
+
+        <div class="wallet-modal-overlay" id="walletModal">
+          <div class="wallet-modal">
+            <button type="button" class="wallet-modal-close" onclick="closeWalletModal()" aria-label="Close">
+              <i class="fa-solid fa-xmark"></i>
+            </button>
+
+            <div class="wm-balance-card">
+              <div class="wm-balance-top">
+                <div class="wm-coin"><i class="fa-solid fa-coins"></i></div>
+                <span class="wm-balance-title">Balance</span>
+                <span class="wm-help" title="Your available wallet balance">?</span>
+              </div>
+              <div class="wm-balance-amount">Rs.<?= number_format($wallet_balance, 2) ?></div>
+              <div class="wm-balance-sub">
+                <?= $wallet_balance > 0 ? 'Available for withdrawal' : 'Top up to get requests' ?>
+              </div>
+              <button type="button" class="wm-topup-btn">Top up</button>
+            </div>
+
+            <div class="wm-row">
+              <div class="wm-row-icon"><i class="fa-solid fa-money-check-dollar"></i></div>
+              <span class="wm-row-label">Payment methods</span>
+              <span class="wm-row-arrow"><i class="fa-solid fa-chevron-right"></i></span>
+            </div>
+
+            <div class="wm-qr-card">
+              <div class="wm-qr-head">
+                <div class="wm-qr-icon"><i class="fa-solid fa-qrcode"></i></div>
+                <span class="wm-qr-title">QR payment</span>
+                <span class="wm-qr-badge">New</span>
+              </div>
+              <div class="wm-qr-desc">Get paid directly to your linked wallet (eSewa / Khalti).</div>
+              <button type="button" class="wm-link-btn">Link Wallet</button>
+            </div>
+          </div>
+        </div>
+        <script>
+          function openWalletModal(e) {
+            if (e) e.preventDefault();
+            document.getElementById('walletModal').classList.add('open');
+          }
+          function closeWalletModal() {
+            document.getElementById('walletModal').classList.remove('open');
+          }
+          document.addEventListener('click', function (e) {
+            var modal = document.getElementById('walletModal');
+            if (e.target === modal) closeWalletModal();
+          });
+          document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') closeWalletModal();
+          });
+          function toggleWalletBalance() {
+            var amount = document.getElementById('walletAmount');
+            var icon = document.getElementById('walletEyeIcon');
+            if (amount.dataset.hidden === '1') {
+              amount.textContent = amount.dataset.balance;
+              amount.dataset.hidden = '0';
+              icon.className = 'fa-regular fa-eye';
+            } else {
+              amount.textContent = 'Rs.••••';
+              amount.dataset.hidden = '1';
+              icon.className = 'fa-regular fa-eye-slash';
+            }
+          }
+        </script>
 
         <div class="stats-grid">
           <div class="card">

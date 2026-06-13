@@ -396,3 +396,336 @@ body {
 .switch input:checked + .slider::before {
   transform: translateX(26px);
 }
+
+/* Wallet bar (overview) */
+.wallet-bar {
+  background: linear-gradient(135deg, #004d40 0%, #00796b 100%);
+  border-radius: 14px;
+  padding: 22px 28px;
+  margin-bottom: 24px;
+  color: #fff;
+  box-shadow: 0 6px 20px rgba(0,77,64,0.22);
+}
+.wallet-bar-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+.wallet-bar-left {
+  display: flex;
+  flex-direction: column;
+}
+.wallet-bar-title {
+  margin: 0;
+  font-size: 28px;
+  font-weight: 600;
+  color: #fff;
+}
+.wallet-bar-sub {
+  font-size: 14px;
+  color: #b2dfdb;
+  margin-top: 2px;
+}
+.wallet-bar-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+}
+.wallet-bar-amount-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.wallet-bar-amount {
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+}
+.wallet-eye {
+  cursor: pointer;
+  color: #b9f6ca;
+  font-size: 17px;
+  transition: color 0.2s;
+}
+.wallet-eye:hover {
+  color: #fff;
+}
+.wallet-bar-topup {
+  background: transparent;
+  border: none;
+  color: #b9f6ca;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  text-decoration: none;
+  transition: color 0.2s;
+}
+.wallet-bar-topup:hover {
+  color: #fff;
+}
+.wallet-bar-form {
+  display: none;
+  gap: 10px;
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(255,255,255,0.18);
+}
+.wallet-bar-form.open {
+  display: flex;
+}
+.wallet-bar-form input {
+  flex: 1;
+  max-width: 260px;
+  padding: 11px 14px;
+  border: none;
+  border-radius: 8px;
+  font-size: 15px;
+  font-family: inherit;
+}
+.wallet-bar-form button {
+  background: #b9f6ca;
+  color: #004d40;
+  border: none;
+  border-radius: 8px;
+  padding: 11px 22px;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.wallet-bar-form button:hover {
+  background: #a5f0ba;
+}
+
+/* Wallet modal popup */
+.wallet-modal-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 30, 25, 0.55);
+  z-index: 1000;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 60px 16px;
+  overflow-y: auto;
+}
+.wallet-modal-overlay.open {
+  display: flex;
+}
+.wallet-modal {
+  position: relative;
+  width: 100%;
+  max-width: 420px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  animation: wmSlideIn 0.25s ease;
+}
+@keyframes wmSlideIn {
+  from { opacity: 0; transform: translateY(-12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.wallet-modal-close {
+  position: absolute;
+  top: -44px;
+  left: 0;
+  background: rgba(255,255,255,0.15);
+  color: #fff;
+  border: none;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  font-size: 18px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.wallet-modal-close:hover {
+  background: rgba(255,255,255,0.3);
+}
+.wm-balance-card {
+  background: linear-gradient(150deg, #004d40 0%, #00796b 100%);
+  border-radius: 16px;
+  padding: 24px;
+  color: #fff;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+}
+.wm-balance-top {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.wm-coin {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  color: #b9f6ca;
+}
+.wm-balance-title {
+  font-size: 17px;
+  font-weight: 600;
+}
+.wm-help {
+  margin-left: auto;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  cursor: help;
+}
+.wm-balance-amount {
+  font-size: 36px;
+  font-weight: 700;
+  margin: 18px 0 4px;
+}
+.wm-balance-sub {
+  font-size: 14px;
+  color: #b2dfdb;
+  margin-bottom: 18px;
+}
+.wm-topup-btn {
+  width: 100%;
+  background: #b9f6ca;
+  color: #004d40;
+  border: none;
+  border-radius: 30px;
+  padding: 14px;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.wm-topup-btn:hover {
+  background: #a5f0ba;
+}
+.wm-topup-form {
+  display: none;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 14px;
+}
+.wm-topup-form.open {
+  display: flex;
+}
+.wm-topup-form input {
+  padding: 12px 14px;
+  border-radius: 8px;
+  border: none;
+  font-size: 15px;
+  font-family: inherit;
+}
+.wm-topup-form button {
+  background: #004d40;
+  color: #fff;
+  border: 1px solid rgba(255,255,255,0.4);
+  border-radius: 8px;
+  padding: 12px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.wm-topup-form button:hover {
+  background: #00382e;
+}
+.wm-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: #fff;
+  border-radius: 14px;
+  padding: 18px 20px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.12);
+  cursor: pointer;
+  transition: box-shadow 0.2s;
+}
+.wm-row:hover {
+  box-shadow: 0 4px 16px rgba(0,0,0,0.18);
+}
+.wm-row-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: #e0f2f1;
+  color: #00796b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+}
+.wm-row-label {
+  font-weight: 600;
+  color: #263238;
+}
+.wm-row-arrow {
+  margin-left: auto;
+  color: #9e9e9e;
+}
+.wm-qr-card {
+  background: #fff;
+  border-radius: 14px;
+  padding: 20px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.12);
+}
+.wm-qr-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.wm-qr-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: #004d40;
+  color: #b9f6ca;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+}
+.wm-qr-title {
+  font-weight: 600;
+  color: #263238;
+}
+.wm-qr-badge {
+  background: #b9f6ca;
+  color: #004d40;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 12px;
+}
+.wm-qr-desc {
+  color: #607d8b;
+  font-size: 14px;
+  margin: 12px 0 16px;
+}
+.wm-link-btn {
+  width: 100%;
+  background: #f1f3f4;
+  color: #263238;
+  border: none;
+  border-radius: 8px;
+  padding: 13px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.wm-link-btn:hover {
+  background: #e0f2f1;
+}
