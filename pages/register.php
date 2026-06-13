@@ -171,6 +171,7 @@ closeDBConnection($conn);
                 <option value="">Select your role</option>
                 <option value="customer">Customer</option>
                 <option value="provider">Service Provider</option>
+                <!-- <option value="admin">Admin</option> --> //add this option only if you want to add admin role
               </select>
               <i class="fas fa-id-badge"></i>
             </div>
