@@ -346,6 +346,7 @@ button:hover { transform: translateY(-2px); box-shadow: 0 16px 34px rgba(0, 137,
   flex-direction: row-reverse;
   justify-content: flex-end;
   gap: 8px;
+  margin-bottom: 24px;
 }
 .star-rating input[type="radio"] {
   display: none;
@@ -358,8 +359,9 @@ button:hover { transform: translateY(-2px); box-shadow: 0 16px 34px rgba(0, 137,
 }
 .star-rating label:hover,
 .star-rating label:hover ~ label,
-.star-rating input[type="radio"]:checked ~ label {
-  color: #ff9800; /* Rich orange gold */
+.star-rating input[type="radio"]:checked ~ label,
+.star-rating label.active {
+  color: #ff9800;
 }
 .star-rating label:active {
   transform: scale(0.9);
