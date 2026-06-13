@@ -204,7 +204,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_profile'])) {
         }
     }
     $stmt->close();
-    header("Location: provider-dashboard.php#profile");
+    header('Location: provider-dashboard.php?booking_msg=' . urlencode('Profile updated successfully.') . '#profile');
     exit();
 }
 
@@ -740,42 +740,9 @@ $stmt->close();
   </footer>
 </body>
 <script>
-  window.addEventListener('DOMContentLoaded', () => {
-    const name = localStorage.getItem('providerName') || "provider";
-    const email = localStorage.getItem('providerEmail') || "provider@gmail.com";
-    const phone = localStorage.getItem('providerPhone') || "9801000000";
-
-    document.getElementById('view-name').textContent = name;
-    document.getElementById('view-email').textContent = email;
-    document.getElementById('view-phone').textContent = phone;
-
-    document.getElementById('name').value = name;
-    document.getElementById('email').value = email;
-    document.getElementById('phone').value = phone;
-  });
-
   document.getElementById('edit-btn').addEventListener('click', () => {
     document.getElementById('profile-view').style.display = 'none';
     document.getElementById('profile-form').style.display = 'block';
-  });
-
-  document.getElementById('profile-form').addEventListener('submit', function(e) {
-    e.preventDefault();
-    const name = document.getElementById('name').value;
-    const email = document.getElementById('email').value;
-    const phone = document.getElementById('phone').value;
-
-    localStorage.setItem('providerName', name);
-    localStorage.setItem('providerEmail', email);
-    localStorage.setItem('providerPhone', phone);
-
-    document.getElementById('view-name').textContent = name;
-    document.getElementById('view-email').textContent = email;
-    document.getElementById('view-phone').textContent = phone;
-
-    document.getElementById('profile-form').style.display = 'none';
-    document.getElementById('profile-view').style.display = 'block';
-    alert('Profile updated!');
   });
 </script>
 </html>

@@ -15,6 +15,166 @@ if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'customer') {
 $conn = getDBConnection();
 // Ensure the availability toggle column exists (MariaDB supports IF NOT EXISTS)
 $conn->query("ALTER TABLE users ADD COLUMN IF NOT EXISTS is_available TINYINT(1) NOT NULL DEFAULT 1");
+
+function enrichProvidersWithStats($conn, array &$providers) {
+    if (empty($providers)) {
+        return;
+    }
+    $ids = array_map('intval', array_column($providers, 'id'));
+    $placeholders = implode(',', array_fill(0, count($ids), '?'));
+    $types = str_repeat('i', count($ids));
+    $index = [];
+
+    foreach ($providers as $i => $provider) {
+        $providers[$i]['avg_rating'] = 0;
+        $providers[$i]['review_count'] = 0;
+        $providers[$i]['completed_services'] = 0;
+        $index[(int) $provider['id']] = $i;
+    }
+
+    $sql = "SELECT provider_id, AVG(rating) AS avg_rating, COUNT(*) AS review_count
+            FROM reviews WHERE provider_id IN ($placeholders) GROUP BY provider_id";
+    $stmt = $conn->prepare($sql);
+    $stmt->bind_param($types, ...$ids);
+    $stmt->execute();
+    $res = $stmt->get_result();
+    while ($row = $res->fetch_assoc()) {
+        $i = $index[(int) $row['provider_id']];
+        $providers[$i]['avg_rating'] = round((float) $row['avg_rating'], 1);
+        $providers[$i]['review_count'] = (int) $row['review_count'];
+    }
+    $stmt->close();
+
+    $sql = "SELECT provider_id, COUNT(*) AS completed_services
+            FROM bookings WHERE provider_id IN ($placeholders) AND status = 'completed' GROUP BY provider_id";
+    $stmt = $conn->prepare($sql);
+    $stmt->bind_param($types, ...$ids);
+    $stmt->execute();
+    $res = $stmt->get_result();
+    while ($row = $res->fetch_assoc()) {
+        $i = $index[(int) $row['provider_id']];
+        $providers[$i]['completed_services'] = (int) $row['completed_services'];
+    }
+    $stmt->close();
+}
+
+function fetchAvailableProviders($conn, $service_id, $service_date, $service_time) {
+    $providers = [];
+    $stmt = $conn->prepare(
+        "SELECT u.id, u.username, sp.price, sp.availability
+         FROM service_providers sp
+         JOIN users u ON sp.user_id = u.id
+         WHERE sp.service_id = ? AND sp.status = 'approved' AND u.is_available = 1"
+    );
+    $stmt->bind_param("i", $service_id);
+    $stmt->execute();
+    $res = $stmt->get_result();
+    while ($row = $res->fetch_assoc()) {
+        if (isProviderTimeSlotAvailable($conn, $row['id'], $service_date, $service_time)) {
+            $providers[] = $row;
+        }
+    }
+    $stmt->close();
+    enrichProvidersWithStats($conn, $providers);
+    return $providers;
+}
+
+function renderStarRatingHtml($avg_rating, $review_count) {
+    if ($review_count <= 0) {
+        return '<span class="provider-rating-none">No ratings yet</span>';
+    }
+    $filled = max(0, min(5, (int) round($avg_rating)));
+    $stars = str_repeat('<i class="fas fa-star"></i>', $filled)
+        . str_repeat('<i class="far fa-star"></i>', 5 - $filled);
+    return '<span class="provider-stars" aria-label="' . htmlspecialchars((string) $avg_rating) . ' out of 5 stars">'
+        . $stars . '</span><span class="provider-rating-value">' . number_format($avg_rating, 1) . '</span>';
+}
+
+if (isset($_GET['ajax']) && $_GET['ajax'] === 'provider_profile') {
+    header('Content-Type: application/json');
+    $provider_id = intval($_GET['provider_id'] ?? 0);
+    if ($provider_id <= 0) {
+        echo json_encode(['error' => 'Invalid provider.']);
+        closeDBConnection($conn);
+        exit();
+    }
+
+    $profile = [
+        'username' => '',
+        'phone' => '',
+        'address' => '',
+        'profile_picture' => '',
+        'avg_rating' => 0,
+        'review_count' => 0,
+        'completed_services' => 0,
+        'reviews' => [],
+    ];
+
+    $stmt = $conn->prepare("SELECT username, phone FROM users WHERE id = ? AND role = 'provider'");
+    $stmt->bind_param("i", $provider_id);
+    $stmt->execute();
+    $user = $stmt->get_result()->fetch_assoc();
+    $stmt->close();
+
+    if (!$user) {
+        echo json_encode(['error' => 'Provider not found.']);
+        closeDBConnection($conn);
+        exit();
+    }
+
+    $profile['username'] = $user['username'];
+    $profile['phone'] = $user['phone'] ?? '';
+
+    $stmt = $conn->prepare("SELECT address, profile_picture FROM user_profiles WHERE user_id = ?");
+    $stmt->bind_param("i", $provider_id);
+    $stmt->execute();
+    if ($row = $stmt->get_result()->fetch_assoc()) {
+        $profile['address'] = $row['address'] ?? '';
+        $profile['profile_picture'] = $row['profile_picture'] ?? '';
+    }
+    $stmt->close();
+
+    $stmt = $conn->prepare("SELECT AVG(rating) AS avg_rating, COUNT(*) AS review_count FROM reviews WHERE provider_id = ?");
+    $stmt->bind_param("i", $provider_id);
+    $stmt->execute();
+    if ($row = $stmt->get_result()->fetch_assoc()) {
+        $profile['avg_rating'] = round((float) ($row['avg_rating'] ?? 0), 1);
+        $profile['review_count'] = (int) ($row['review_count'] ?? 0);
+    }
+    $stmt->close();
+
+    $stmt = $conn->prepare("SELECT COUNT(*) AS completed_services FROM bookings WHERE provider_id = ? AND status = 'completed'");
+    $stmt->bind_param("i", $provider_id);
+    $stmt->execute();
+    if ($row = $stmt->get_result()->fetch_assoc()) {
+        $profile['completed_services'] = (int) ($row['completed_services'] ?? 0);
+    }
+    $stmt->close();
+
+    $stmt = $conn->prepare(
+        "SELECT r.rating, r.comment, r.created_at,
+                CASE WHEN r.show_name = 1 THEN u.username ELSE 'Anonymous' END AS customer_name,
+                s.name AS service_name
+         FROM reviews r
+         LEFT JOIN users u ON r.customer_id = u.id
+         LEFT JOIN services s ON r.service_id = s.id
+         WHERE r.provider_id = ?
+         ORDER BY r.created_at DESC
+         LIMIT 20"
+    );
+    $stmt->bind_param("i", $provider_id);
+    $stmt->execute();
+    $res = $stmt->get_result();
+    while ($row = $res->fetch_assoc()) {
+        $profile['reviews'][] = $row;
+    }
+    $stmt->close();
+
+    echo json_encode($profile);
+    closeDBConnection($conn);
+    exit();
+}
+
 $message = "";
 $message_type = 'success';
 $no_providers_message = "Unfortunately, there are no providers available for your chosen date, time, or service at the moment. We'd recommend selecting an alternative slot or contacting support for assistance.";
@@ -46,22 +206,12 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['show_providers'])) {
     $service_date = $_POST['date'];
     $service_time = $_POST['time'] ?? '';
     $address = $_POST['address'];
-    // Fetch providers for this service
-    $stmt = $conn->prepare("SELECT u.id, u.username, sp.price, sp.availability FROM service_providers sp JOIN users u ON sp.user_id = u.id WHERE sp.service_id = ? AND sp.status = 'approved' AND u.is_available = 1");
-    $stmt->bind_param("i", $service_id);
-    $stmt->execute();
-    $res = $stmt->get_result();
-    while ($row = $res->fetch_assoc()) {
-        if (isProviderTimeSlotAvailable($conn, $row['id'], $service_date, $service_time)) {
-            $providers[] = $row;
-        }
-    }
+    $providers = fetchAvailableProviders($conn, $service_id, $service_date, $service_time);
     if (count($providers) === 0) {
         $message = $no_providers_message;
         $message_type = 'error';
     }
     $show_providers = true;
-    $stmt->close();
 }
 
 // Step 2: Handle booking with selected provider
@@ -80,16 +230,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['book_with_provider']))
         $message_type = 'error';
         $show_providers = true;
 
-        $stmt = $conn->prepare("SELECT u.id, u.username, sp.price, sp.availability FROM service_providers sp JOIN users u ON sp.user_id = u.id WHERE sp.service_id = ? AND sp.status = 'approved' AND u.is_available = 1");
-        $stmt->bind_param("i", $service_id);
-        $stmt->execute();
-        $res = $stmt->get_result();
-        while ($row = $res->fetch_assoc()) {
-            if (isProviderTimeSlotAvailable($conn, $row['id'], $service_date, $service_time)) {
-                $providers[] = $row;
-            }
-        }
-        $stmt->close();
+        $providers = fetchAvailableProviders($conn, $service_id, $service_date, $service_time);
     } else {
         $stmt = $conn->prepare("INSERT INTO bookings (customer_id, service_id, status, booking_date, service_date, service_time, address, provider_id, served) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULL)");
         $stmt->bind_param("iisssssi", $customer_id, $service_id, $status, $booking_date, $service_date, $service_time, $address, $provider_id);
@@ -239,12 +380,22 @@ closeDBConnection($conn);
             <span class="provider-label">Select a Provider</span>
             <div class="provider-cards">
               <?php foreach ($providers as $provider): ?>
-                <label class="provider-card">
-                  <input type="radio" name="provider_id" value="<?= $provider['id'] ?>" required class="provider-radio">
+                <div class="provider-card">
+                  <input type="radio" name="provider_id" value="<?= $provider['id'] ?>" required class="provider-radio" id="provider-<?= (int) $provider['id'] ?>">
                   <div class="provider-name"><?= htmlspecialchars($provider['username']) ?></div>
+                  <div class="provider-rating">
+                    <?= renderStarRatingHtml($provider['avg_rating'], $provider['review_count']) ?>
+                    <?php if ($provider['review_count'] > 0): ?>
+                      <span class="provider-review-count">(<?= (int) $provider['review_count'] ?> review<?= $provider['review_count'] === 1 ? '' : 's' ?>)</span>
+                    <?php endif; ?>
+                  </div>
                   <div class="provider-price">Rs. <?= htmlspecialchars($provider['price']) ?></div>
                   <div class="provider-availability">Availability: <?= htmlspecialchars($provider['availability']) ?></div>
-                </label>
+                  <div class="provider-completed"><i class="fas fa-check-circle"></i> <?= (int) $provider['completed_services'] ?> service<?= $provider['completed_services'] === 1 ? '' : 's' ?> completed</div>
+                  <button type="button" class="provider-view-btn" data-provider-id="<?= (int) $provider['id'] ?>">
+                    <i class="fas fa-eye"></i> View Profile
+                  </button>
+                </div>
               <?php endforeach; ?>
             </div>
             <button type="submit" name="book_with_provider" class="auth-btn">Confirm Booking <i class="fas fa-check"></i></button>
@@ -254,7 +405,195 @@ closeDBConnection($conn);
     </div>
   </div>
 
+  <div id="provider-profile-modal" class="provider-modal" hidden>
+    <div class="provider-modal-backdrop" data-close-modal></div>
+    <div class="provider-modal-panel" role="dialog" aria-labelledby="provider-modal-title" aria-modal="true">
+      <button type="button" class="provider-modal-close" data-close-modal aria-label="Close profile">&times;</button>
+      <div id="provider-modal-loading" class="provider-modal-loading">
+        <i class="fas fa-spinner fa-spin"></i> Loading profile…
+      </div>
+      <div id="provider-modal-content" hidden>
+        <div class="provider-modal-header">
+          <div class="provider-modal-avatar" id="provider-modal-avatar"></div>
+          <div>
+            <h2 id="provider-modal-title"></h2>
+            <div class="provider-modal-rating" id="provider-modal-rating"></div>
+            <p class="provider-modal-meta" id="provider-modal-completed"></p>
+          </div>
+        </div>
+        <div class="provider-modal-details">
+          <p id="provider-modal-phone"></p>
+          <p id="provider-modal-address"></p>
+        </div>
+        <h3 class="provider-modal-reviews-title">Past Reviews</h3>
+        <div id="provider-modal-reviews" class="provider-modal-reviews"></div>
+      </div>
+      <p id="provider-modal-error" class="provider-modal-error" hidden></p>
+    </div>
+  </div>
+
   <script>
+    (function () {
+      const modal = document.getElementById('provider-profile-modal');
+      if (!modal) return;
+
+      const loading = document.getElementById('provider-modal-loading');
+      const content = document.getElementById('provider-modal-content');
+      const errorEl = document.getElementById('provider-modal-error');
+      const titleEl = document.getElementById('provider-modal-title');
+      const avatarEl = document.getElementById('provider-modal-avatar');
+      const ratingEl = document.getElementById('provider-modal-rating');
+      const completedEl = document.getElementById('provider-modal-completed');
+      const phoneEl = document.getElementById('provider-modal-phone');
+      const addressEl = document.getElementById('provider-modal-address');
+      const reviewsEl = document.getElementById('provider-modal-reviews');
+
+      function escapeHtml(value) {
+        return String(value ?? '')
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;');
+      }
+
+      function starsHtml(avg, count) {
+        if (!count) return '<span class="provider-rating-none">No ratings yet</span>';
+        const filled = Math.max(0, Math.min(5, Math.round(avg)));
+        let html = '<span class="provider-stars">';
+        for (let i = 1; i <= 5; i++) {
+          html += i <= filled
+            ? '<i class="fas fa-star"></i>'
+            : '<i class="far fa-star"></i>';
+        }
+        html += '</span><span class="provider-rating-value">' + avg.toFixed(1) + '</span>';
+        html += ' <span class="provider-review-count">(' + count + ' review' + (count === 1 ? '' : 's') + ')</span>';
+        return html;
+      }
+
+      function formatDate(value) {
+        if (!value) return '';
+        const d = new Date(value.replace(' ', 'T'));
+        return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+      }
+
+      function openModal() {
+        modal.hidden = false;
+        document.body.style.overflow = 'hidden';
+      }
+
+      function closeModal() {
+        modal.hidden = true;
+        document.body.style.overflow = '';
+      }
+
+      function showLoading() {
+        loading.hidden = false;
+        content.hidden = true;
+        errorEl.hidden = true;
+      }
+
+      function showError(message) {
+        loading.hidden = true;
+        content.hidden = true;
+        errorEl.hidden = false;
+        errorEl.textContent = message;
+      }
+
+      function showProfile(data) {
+        loading.hidden = true;
+        errorEl.hidden = true;
+        content.hidden = false;
+
+        titleEl.textContent = data.username || 'Provider';
+        ratingEl.innerHTML = starsHtml(Number(data.avg_rating) || 0, Number(data.review_count) || 0);
+        const completed = Number(data.completed_services) || 0;
+        completedEl.innerHTML = '<i class="fas fa-check-circle"></i> ' + completed + ' service' + (completed === 1 ? '' : 's') + ' completed';
+
+        if (data.profile_picture) {
+          const img = document.createElement('img');
+          img.src = data.profile_picture;
+          img.alt = (data.username || 'Provider') + ' profile photo';
+          avatarEl.textContent = '';
+          avatarEl.appendChild(img);
+        } else {
+          avatarEl.textContent = (data.username || 'P').charAt(0).toUpperCase();
+        }
+
+        phoneEl.innerHTML = data.phone
+          ? '<i class="fas fa-phone"></i> ' + escapeHtml(data.phone)
+          : '<span class="provider-modal-muted">Phone not provided</span>';
+        addressEl.innerHTML = data.address
+          ? '<i class="fas fa-location-dot"></i> ' + escapeHtml(data.address)
+          : '<span class="provider-modal-muted">Address not provided</span>';
+
+        reviewsEl.innerHTML = '';
+        if (!data.reviews || !data.reviews.length) {
+          reviewsEl.innerHTML = '<p class="provider-modal-muted">No reviews yet.</p>';
+          return;
+        }
+
+        data.reviews.forEach((review) => {
+          const card = document.createElement('article');
+          card.className = 'provider-review-card';
+          const rating = Number(review.rating) || 0;
+          let stars = '';
+          for (let i = 1; i <= 5; i++) {
+            stars += i <= rating ? '★' : '☆';
+          }
+          card.innerHTML =
+            '<div class="provider-review-top">' +
+              '<strong>' + escapeHtml(review.customer_name || 'Anonymous') + '</strong>' +
+              '<span class="provider-review-stars">' + stars + '</span>' +
+            '</div>' +
+            '<div class="provider-review-service">' + escapeHtml(review.service_name || 'Service') + ' · ' + escapeHtml(formatDate(review.created_at)) + '</div>' +
+            '<p class="provider-review-comment">' + escapeHtml(review.comment || 'No comment provided.') + '</p>';
+          reviewsEl.appendChild(card);
+        });
+      }
+
+      async function loadProfile(providerId) {
+        showLoading();
+        openModal();
+        try {
+          const res = await fetch('book-service.php?ajax=provider_profile&provider_id=' + encodeURIComponent(providerId));
+          const data = await res.json();
+          if (data.error) {
+            showError(data.error);
+            return;
+          }
+          showProfile(data);
+        } catch (err) {
+          showError('Could not load provider profile. Please try again.');
+        }
+      }
+
+      document.addEventListener('click', (e) => {
+        const viewBtn = e.target.closest('.provider-view-btn');
+        if (viewBtn) {
+          e.preventDefault();
+          e.stopPropagation();
+          loadProfile(viewBtn.dataset.providerId);
+          return;
+        }
+
+        const card = e.target.closest('.provider-card');
+        if (card && !e.target.closest('.provider-view-btn')) {
+          const radio = card.querySelector('.provider-radio');
+          if (radio) {
+            radio.checked = !radio.checked;
+          }
+        }
+      });
+
+      modal.querySelectorAll('[data-close-modal]').forEach((el) => {
+        el.addEventListener('click', closeModal);
+      });
+
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && !modal.hidden) closeModal();
+      });
+    })();
+
     (function () {
       const MONTHS = ['January','February','March','April','May','June',
                       'July','August','September','October','November','December'];
@@ -266,6 +605,8 @@ closeDBConnection($conn);
 
       /* ---------- Date picker (calendar) ---------- */
       const dp = document.getElementById('datePicker');
+      if (!dp) return;
+
       const dateTrigger = document.getElementById('dateTrigger');
       const calPop = document.getElementById('calPop');
       const calTitle = document.getElementById('calTitle');
