@@ -17,6 +17,30 @@ if (!isset($_SESSION['user_id']) || !isset($_SESSION['role']) || $_SESSION['role
 $conn = getDBConnection();
 
 $user_id = $_SESSION['user_id'];
+
+if (isset($_GET['ajax']) && $_GET['ajax'] === 'pending_reviews') {
+    header('Content-Type: application/json');
+    $pending = [];
+    $sql = "SELECT b.id AS booking_id, s.name AS service_name, u.username AS provider_name, b.service_date
+            FROM bookings b
+            LEFT JOIN services s ON b.service_id = s.id
+            LEFT JOIN users u ON b.provider_id = u.id
+            LEFT JOIN reviews r ON b.id = r.booking_id
+            WHERE b.customer_id = ? AND b.status = 'completed' AND r.id IS NULL
+            ORDER BY b.id DESC";
+    $stmt = $conn->prepare($sql);
+    $stmt->bind_param("i", $user_id);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    while ($row = $result->fetch_assoc()) {
+        $pending[] = $row;
+    }
+    $stmt->close();
+    closeDBConnection($conn);
+    echo json_encode(['pending' => $pending]);
+    exit;
+}
+
 $bookings = [];
 $sql = "SELECT b.id AS booking_id, b.provider_id, b.service_id, s.name AS service_name, u.username AS provider_name, b.service_date, b.status AS booking_status, r.id AS review_id, r.rating AS review_rating
         FROM bookings b
@@ -385,6 +409,9 @@ closeDBConnection($conn);
     <div class="modal-content" style="background: #ffffff; width: 90%; max-width: 500px; border-radius: 24px; padding: clamp(24px, 4vw, 36px); box-shadow: 0 25px 50px rgba(0, 77, 64, 0.25); position: relative; animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1);">
       <span class="close-modal-btn" style="position: absolute; top: 20px; right: 24px; font-size: 1.8rem; cursor: pointer; color: #888; transition: color 0.2s;">&times;</span>
       <h3 style="margin: 0 0 10px; font-size: 1.4rem; color: var(--teal-deep);"><i class="fas fa-star-half-stroke" style="color: var(--accent);"></i> Review Service</h3>
+      <p id="modal-review-prompt" style="display: none; margin: 0 0 12px; font-size: 0.9rem; color: #2e7d32; background: #e8f5e9; padding: 10px 14px; border-radius: 10px; border: 1px solid #c8e6c9;">
+        <i class="fas fa-check-circle"></i> Your service is complete! Share your experience with the provider.
+      </p>
       <p id="modal-service-provider" style="margin: 0 0 24px; font-size: 0.95rem; color: #555; background: #f4faf8; padding: 12px 16px; border-radius: 12px; border-left: 4px solid var(--teal);"></p>
       
       <form method="POST" action="customer-dashboard.php">
@@ -476,22 +503,87 @@ starInputs.forEach(input => {
   });
 });
 
+const reviewPromptKey = 'sewamandu_review_prompted';
+const modalReviewPrompt = document.getElementById('modal-review-prompt');
+
+function getPromptedReviewIds() {
+  try {
+    return JSON.parse(sessionStorage.getItem(reviewPromptKey) || '[]');
+  } catch (e) {
+    return [];
+  }
+}
+
+function markReviewPrompted(bookingId) {
+  const prompted = getPromptedReviewIds();
+  const id = String(bookingId);
+  if (!prompted.includes(id)) {
+    prompted.push(id);
+    sessionStorage.setItem(reviewPromptKey, JSON.stringify(prompted));
+  }
+}
+
+function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.textContent = text || '';
+  return div.innerHTML;
+}
+
+function openReviewModal(booking, autoPrompt = false) {
+  if (modal.style.display === 'flex') {
+    return;
+  }
+
+  resetReviewForm();
+  modalBookingId.value = booking.booking_id;
+  modalServiceProvider.innerHTML = `<i class="fas fa-tools" style="color: var(--teal);"></i> <strong>${escapeHtml(booking.service_name)}</strong> by <strong>${escapeHtml(booking.provider_name)}</strong>`;
+  modalReviewPrompt.style.display = autoPrompt ? 'block' : 'none';
+  modal.style.display = 'flex';
+  markReviewPrompted(booking.booking_id);
+}
+
 document.querySelectorAll('.review-btn').forEach(btn => {
   btn.addEventListener('click', () => {
-    const bookingId = btn.getAttribute('data-booking-id');
-    const providerName = btn.getAttribute('data-provider-name');
-    const serviceName = btn.getAttribute('data-service-name');
-
-    resetReviewForm();
-    modalBookingId.value = bookingId;
-    modalServiceProvider.innerHTML = `<i class="fas fa-tools" style="color: var(--teal);"></i> <strong>${serviceName}</strong> by <strong>${providerName}</strong>`;
-
-    modal.style.display = 'flex';
+    openReviewModal({
+      booking_id: btn.getAttribute('data-booking-id'),
+      provider_name: btn.getAttribute('data-provider-name'),
+      service_name: btn.getAttribute('data-service-name'),
+    });
   });
+});
+
+async function checkForReviewPrompt() {
+  if (document.hidden || modal.style.display === 'flex') {
+    return;
+  }
+
+  try {
+    const res = await fetch('customer-dashboard.php?ajax=pending_reviews', { credentials: 'same-origin' });
+    if (!res.ok) {
+      return;
+    }
+    const data = await res.json();
+    const prompted = getPromptedReviewIds();
+    const next = (data.pending || []).find(item => !prompted.includes(String(item.booking_id)));
+    if (next) {
+      openReviewModal(next, true);
+    }
+  } catch (e) {
+    // Ignore polling errors; the next check will retry.
+  }
+}
+
+checkForReviewPrompt();
+setInterval(checkForReviewPrompt, 4000);
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden) {
+    checkForReviewPrompt();
+  }
 });
 
 function closeReviewModal() {
   modal.style.display = 'none';
+  modalReviewPrompt.style.display = 'none';
   resetReviewForm();
 }
 

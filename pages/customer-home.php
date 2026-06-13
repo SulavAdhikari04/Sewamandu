@@ -65,6 +65,42 @@ if ($conn) {
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../css/home-motion.css">
+  <style>
+    #review-modal .star-rating {
+      display: inline-flex;
+      flex-direction: row-reverse;
+      justify-content: flex-end;
+      gap: 8px;
+      margin-bottom: 24px;
+    }
+    #review-modal .star-rating input[type="radio"] { display: none; }
+    #review-modal .star-rating label {
+      font-size: 2.2rem;
+      color: #dbe7e3;
+      cursor: pointer;
+      transition: color 0.2s ease-in-out, transform 0.15s ease;
+    }
+    #review-modal .star-rating label:hover,
+    #review-modal .star-rating label:hover ~ label,
+    #review-modal .star-rating input[type="radio"]:checked ~ label,
+    #review-modal .star-rating label.active { color: #ff9800; }
+    #review-modal .review-submit-btn {
+      width: 100%;
+      padding: 13px;
+      font-size: 1rem;
+      font-weight: 600;
+      color: #fff;
+      background: linear-gradient(120deg, var(--teal), var(--teal-deep));
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+      box-shadow: 0 10px 26px rgba(0, 137, 123, 0.25);
+    }
+    #review-modal .review-submit-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 16px 34px rgba(0, 137, 123, 0.36);
+    }
+  </style>
 </head>
 <body>
 
@@ -280,6 +316,49 @@ if ($conn) {
     <div class="copy">&copy; 2025 Sewamandu. All rights reserved.</div>
   </footer>
 
+  <!-- Review Modal -->
+  <div id="review-modal" class="modal" style="display: none; position: fixed; inset: 0; background: rgba(11, 31, 28, 0.65); backdrop-filter: blur(8px); z-index: 2000; align-items: center; justify-content: center;">
+    <div class="modal-content" style="background: #ffffff; width: 90%; max-width: 500px; border-radius: 24px; padding: clamp(24px, 4vw, 36px); box-shadow: 0 25px 50px rgba(0, 77, 64, 0.25); position: relative;">
+      <span class="close-modal-btn" style="position: absolute; top: 20px; right: 24px; font-size: 1.8rem; cursor: pointer; color: #888;">&times;</span>
+      <h3 style="margin: 0 0 10px; font-size: 1.4rem; color: var(--teal-deep);"><i class="fas fa-star-half-stroke" style="color: var(--accent);"></i> Review Service</h3>
+      <p id="modal-review-prompt" style="display: none; margin: 0 0 12px; font-size: 0.9rem; color: #2e7d32; background: #e8f5e9; padding: 10px 14px; border-radius: 10px; border: 1px solid #c8e6c9;">
+        <i class="fas fa-check-circle"></i> Your service is complete! Share your experience with the provider.
+      </p>
+      <p id="modal-service-provider" style="margin: 0 0 24px; font-size: 0.95rem; color: #555; background: #f4faf8; padding: 12px 16px; border-radius: 12px; border-left: 4px solid var(--teal);"></p>
+
+      <form method="POST" action="customer-dashboard.php">
+        <input type="hidden" name="booking_id" id="modal-booking-id" value="">
+
+        <label style="display: block; margin-bottom: 8px; font-weight: 600; font-size: 0.9rem; color: #46564f;">Your Rating:</label>
+        <div class="star-rating" id="star-rating">
+          <input type="radio" id="star5" name="rating" value="5" required />
+          <label for="star5" title="5 stars"><i class="fas fa-star"></i></label>
+          <input type="radio" id="star4" name="rating" value="4" />
+          <label for="star4" title="4 stars"><i class="fas fa-star"></i></label>
+          <input type="radio" id="star3" name="rating" value="3" />
+          <label for="star3" title="3 stars"><i class="fas fa-star"></i></label>
+          <input type="radio" id="star2" name="rating" value="2" />
+          <label for="star2" title="2 stars"><i class="fas fa-star"></i></label>
+          <input type="radio" id="star1" name="rating" value="1" />
+          <label for="star1" title="1 star"><i class="fas fa-star"></i></label>
+        </div>
+
+        <label for="review-comment" style="display: block; margin-bottom: 8px; font-weight: 600; font-size: 0.9rem; color: #46564f;">Feedback & Experience:</label>
+        <textarea id="review-comment" name="comment" rows="4" placeholder="How was the service? What did you like or dislike?" style="width: 100%; padding: 14px; border: 1.5px solid #dbe7e3; border-radius: 12px; font-family: inherit; font-size: 0.95rem; background: #fff; resize: vertical; margin-bottom: 20px; outline: none;" required></textarea>
+
+        <label style="display: flex; align-items: flex-start; gap: 10px; margin-bottom: 24px; padding: 14px 16px; background: #f4faf8; border: 1.5px solid #dbe7e3; border-radius: 12px; cursor: pointer;">
+          <input type="checkbox" name="show_name" value="1" style="margin-top: 3px; width: 18px; height: 18px; accent-color: var(--teal); cursor: pointer; flex-shrink: 0;">
+          <span style="font-size: 0.9rem; color: #46564f; line-height: 1.45;">
+            <strong>Show my name to the provider</strong><br>
+            <span style="font-size: 0.82rem; color: #6b7d77;">Leave unchecked to post this review anonymously.</span>
+          </span>
+        </label>
+
+        <button type="submit" name="submit_review" class="review-submit-btn">Submit Review</button>
+      </form>
+    </div>
+  </div>
+
   <script src="../js/home-motion.js"></script>
   <script>
     const profileIcon = document.getElementById("profile-icon");
@@ -290,6 +369,127 @@ if ($conn) {
     });
     window.addEventListener("click", (e) => {
       if (!e.target.closest(".profile-menu")) profileTray.classList.remove("open");
+    });
+
+    const modal = document.getElementById('review-modal');
+    const modalBookingId = document.getElementById('modal-booking-id');
+    const modalServiceProvider = document.getElementById('modal-service-provider');
+    const modalReviewPrompt = document.getElementById('modal-review-prompt');
+    const closeModalBtn = document.querySelector('.close-modal-btn');
+    const starRating = document.getElementById('star-rating');
+    const starInputs = starRating.querySelectorAll('input[type="radio"]');
+    const starLabels = starRating.querySelectorAll('label');
+    const reviewPromptKey = 'sewamandu_review_prompted';
+
+    function updateStarHighlight(rating) {
+      starLabels.forEach(label => {
+        const value = parseInt(label.getAttribute('for').replace('star', ''), 10);
+        label.classList.toggle('active', rating > 0 && value <= rating);
+      });
+    }
+
+    function resetReviewForm() {
+      starInputs.forEach(input => { input.checked = false; });
+      document.getElementById('review-comment').value = '';
+      updateStarHighlight(0);
+    }
+
+    starLabels.forEach(label => {
+      label.addEventListener('mouseenter', () => {
+        updateStarHighlight(parseInt(label.getAttribute('for').replace('star', ''), 10));
+      });
+      label.addEventListener('click', () => {
+        updateStarHighlight(parseInt(label.getAttribute('for').replace('star', ''), 10));
+      });
+    });
+
+    starRating.addEventListener('mouseleave', () => {
+      const checked = starRating.querySelector('input[type="radio"]:checked');
+      updateStarHighlight(checked ? parseInt(checked.value, 10) : 0);
+    });
+
+    starInputs.forEach(input => {
+      input.addEventListener('change', () => {
+        updateStarHighlight(parseInt(input.value, 10));
+      });
+    });
+
+    function getPromptedReviewIds() {
+      try {
+        return JSON.parse(sessionStorage.getItem(reviewPromptKey) || '[]');
+      } catch (e) {
+        return [];
+      }
+    }
+
+    function markReviewPrompted(bookingId) {
+      const prompted = getPromptedReviewIds();
+      const id = String(bookingId);
+      if (!prompted.includes(id)) {
+        prompted.push(id);
+        sessionStorage.setItem(reviewPromptKey, JSON.stringify(prompted));
+      }
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text || '';
+      return div.innerHTML;
+    }
+
+    function openReviewModal(booking, autoPrompt = false) {
+      if (modal.style.display === 'flex') {
+        return;
+      }
+
+      resetReviewForm();
+      modalBookingId.value = booking.booking_id;
+      modalServiceProvider.innerHTML = `<i class="fas fa-tools" style="color: var(--teal);"></i> <strong>${escapeHtml(booking.service_name)}</strong> by <strong>${escapeHtml(booking.provider_name)}</strong>`;
+      modalReviewPrompt.style.display = autoPrompt ? 'block' : 'none';
+      modal.style.display = 'flex';
+      markReviewPrompted(booking.booking_id);
+    }
+
+    function closeReviewModal() {
+      modal.style.display = 'none';
+      modalReviewPrompt.style.display = 'none';
+      resetReviewForm();
+    }
+
+    closeModalBtn.addEventListener('click', closeReviewModal);
+    window.addEventListener('click', (e) => {
+      if (e.target === modal) {
+        closeReviewModal();
+      }
+    });
+
+    async function checkForReviewPrompt() {
+      if (document.hidden || modal.style.display === 'flex') {
+        return;
+      }
+
+      try {
+        const res = await fetch('customer-dashboard.php?ajax=pending_reviews', { credentials: 'same-origin' });
+        if (!res.ok) {
+          return;
+        }
+        const data = await res.json();
+        const prompted = getPromptedReviewIds();
+        const next = (data.pending || []).find(item => !prompted.includes(String(item.booking_id)));
+        if (next) {
+          openReviewModal(next, true);
+        }
+      } catch (e) {
+        // Ignore polling errors; the next check will retry.
+      }
+    }
+
+    checkForReviewPrompt();
+    setInterval(checkForReviewPrompt, 4000);
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) {
+        checkForReviewPrompt();
+      }
     });
   </script>
 </body>
