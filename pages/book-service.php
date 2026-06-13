@@ -13,6 +13,8 @@ if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'customer') {
     exit();
 }
 $conn = getDBConnection();
+// Ensure the availability toggle column exists (MariaDB supports IF NOT EXISTS)
+$conn->query("ALTER TABLE users ADD COLUMN IF NOT EXISTS is_available TINYINT(1) NOT NULL DEFAULT 1");
 $message = "";
 $message_type = 'success';
 $no_providers_message = "Unfortunately, there are no providers available for your chosen date, time, or service at the moment. We'd recommend selecting an alternative slot or contacting support for assistance.";
@@ -45,7 +47,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['show_providers'])) {
     $service_time = $_POST['time'] ?? '';
     $address = $_POST['address'];
     // Fetch providers for this service
-    $stmt = $conn->prepare("SELECT u.id, u.username, sp.price, sp.availability FROM service_providers sp JOIN users u ON sp.user_id = u.id WHERE sp.service_id = ? AND sp.status = 'approved'");
+    $stmt = $conn->prepare("SELECT u.id, u.username, sp.price, sp.availability FROM service_providers sp JOIN users u ON sp.user_id = u.id WHERE sp.service_id = ? AND sp.status = 'approved' AND u.is_available = 1");
     $stmt->bind_param("i", $service_id);
     $stmt->execute();
     $res = $stmt->get_result();
@@ -78,7 +80,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['book_with_provider']))
         $message_type = 'error';
         $show_providers = true;
 
-        $stmt = $conn->prepare("SELECT u.id, u.username, sp.price, sp.availability FROM service_providers sp JOIN users u ON sp.user_id = u.id WHERE sp.service_id = ? AND sp.status = 'approved'");
+        $stmt = $conn->prepare("SELECT u.id, u.username, sp.price, sp.availability FROM service_providers sp JOIN users u ON sp.user_id = u.id WHERE sp.service_id = ? AND sp.status = 'approved' AND u.is_available = 1");
         $stmt->bind_param("i", $service_id);
         $stmt->execute();
         $res = $stmt->get_result();

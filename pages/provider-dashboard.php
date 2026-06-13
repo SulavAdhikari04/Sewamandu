@@ -22,9 +22,24 @@ if ($conn->connect_error) {
 $provider_user_id = $_SESSION['user_id'];
 $message = '';
 
+// Ensure the availability toggle column exists (MariaDB supports IF NOT EXISTS)
+$conn->query("ALTER TABLE users ADD COLUMN IF NOT EXISTS is_available TINYINT(1) NOT NULL DEFAULT 1");
+
 // Add demonstration cookies
 setcookie('provider_dashboard_visited', 'true', time() + (86400 * 30), "/");
 setcookie('provider_user_id', $_SESSION['user_id'], time() + (86400 * 30), "/");
+
+// Handle availability ON/OFF toggle
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['toggle_availability'])) {
+    $is_available = ($_POST['toggle_availability'] === 'on') ? 1 : 0;
+    $stmt = $conn->prepare("UPDATE users SET is_available = ? WHERE id = ?");
+    $stmt->bind_param("ii", $is_available, $provider_user_id);
+    $stmt->execute();
+    $stmt->close();
+    $msg = $is_available ? 'You are now available for services.' : 'You are now unavailable. Customers will not see you for bookings.';
+    header('Location: provider-dashboard.php?booking_msg=' . urlencode($msg) . '#overview');
+    exit();
+}
 
 // Handle Approve/Reject actions
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['booking_id'], $_POST['action'])) {
@@ -296,13 +311,15 @@ function formatBookingTime($service_time) {
 
 // Fetch provider info from users table
 $provider_info = ['username' => '', 'phone' => '', 'id' => $provider_user_id];
-$stmt = $conn->prepare("SELECT username, phone FROM users WHERE id = ?");
+$is_available = 1;
+$stmt = $conn->prepare("SELECT username, phone, is_available FROM users WHERE id = ?");
 $stmt->bind_param("i", $provider_user_id);
 $stmt->execute();
-$stmt->bind_result($username, $phone);
+$stmt->bind_result($username, $phone, $availability_flag);
 if ($stmt->fetch()) {
     $provider_info['username'] = $username;
     $provider_info['phone'] = $phone;
+    $is_available = (int)$availability_flag;
 }
 $stmt->close();
 
@@ -377,6 +394,24 @@ $stmt->close();
 
       <section id="overview">
         <h2>Dashboard Overview</h2>
+
+        <div class="availability-panel <?= $is_available ? 'is-on' : 'is-off' ?>">
+          <div class="availability-info">
+            <span class="availability-label">Service Availability</span>
+            <span class="availability-status">
+              <?= $is_available ? 'You are currently AVAILABLE for new bookings.' : 'You are currently OFFLINE. Customers cannot book you.' ?>
+            </span>
+          </div>
+          <form method="POST" action="provider-dashboard.php#overview" class="availability-form">
+            <input type="hidden" name="toggle_availability" value="<?= $is_available ? 'off' : 'on' ?>">
+            <label class="switch">
+              <input type="checkbox" <?= $is_available ? 'checked' : '' ?> onchange="this.form.submit()">
+              <span class="slider"></span>
+            </label>
+            <span class="switch-text"><?= $is_available ? 'ON' : 'OFF' ?></span>
+          </form>
+        </div>
+
         <div class="stats-grid">
           <div class="card">
             <div class="card-title">Bookings Received</div>
