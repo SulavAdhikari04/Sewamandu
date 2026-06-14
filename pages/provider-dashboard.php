@@ -6,6 +6,7 @@ require_once '../components/SessionManager.php';
 require_once '../components/Database.php';
 require_once '../components/BookingStatus.php';
 require_once '../components/StringHelpers.php';
+require_once '../components/TwoFactorAuth.php';
 $all_services = [];
 if (session_status() === PHP_SESSION_NONE) {
 session_start();
@@ -27,6 +28,18 @@ $message = '';
 $conn->query("ALTER TABLE users ADD COLUMN IF NOT EXISTS is_available TINYINT(1) NOT NULL DEFAULT 1");
 // Ensure the wallet balance column exists
 $conn->query("ALTER TABLE users ADD COLUMN IF NOT EXISTS wallet_balance DECIMAL(10,2) NOT NULL DEFAULT 0.00");
+ensureTwoFactorColumn($conn);
+
+// Handle 2FA toggle
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['toggle_2fa'])) {
+    $enable = $_POST['toggle_2fa'] === 'on';
+    setTwoFactorEnabled($conn, $provider_user_id, $enable);
+    $msg = $enable
+        ? 'Two-factor authentication has been enabled.'
+        : 'Two-factor authentication has been disabled.';
+    header('Location: provider-dashboard.php?security_msg=' . urlencode($msg) . '#profile');
+    exit();
+}
 
 // Add demonstration cookies
 setcookie('provider_dashboard_visited', 'true', time() + (86400 * 30), "/");
@@ -329,20 +342,26 @@ function formatBookingTime($service_time) {
 }
 
 // Fetch provider info from users table
-$provider_info = ['username' => '', 'phone' => '', 'id' => $provider_user_id];
+$provider_info = ['username' => '', 'phone' => '', 'email' => '', 'two_factor_enabled' => 0, 'id' => $provider_user_id];
 $is_available = 1;
 $wallet_balance = 0.00;
-$stmt = $conn->prepare("SELECT username, phone, is_available, wallet_balance FROM users WHERE id = ?");
+$stmt = $conn->prepare("SELECT username, phone, email, two_factor_enabled, is_available, wallet_balance FROM users WHERE id = ?");
 $stmt->bind_param("i", $provider_user_id);
 $stmt->execute();
-$stmt->bind_result($username, $phone, $availability_flag, $balance_value);
+$stmt->bind_result($username, $phone, $email, $two_factor_enabled, $availability_flag, $balance_value);
 if ($stmt->fetch()) {
     $provider_info['username'] = $username;
     $provider_info['phone'] = $phone;
+    $provider_info['email'] = $email;
+    $provider_info['two_factor_enabled'] = (int) $two_factor_enabled;
     $is_available = (int)$availability_flag;
     $wallet_balance = (float)$balance_value;
 }
 $stmt->close();
+
+$security_msg = isset($_GET['security_msg']) ? trim($_GET['security_msg']) : '';
+$masked_account_email = $provider_info['email'] !== '' ? maskEmail($provider_info['email']) : '';
+$two_factor_on = $provider_info['two_factor_enabled'] === 1;
 
 // Fetch customers served (served=1)
 $customers_served = [];
@@ -711,6 +730,9 @@ $stmt->close();
 
       <section id="profile">
         <h3>My Profile</h3>
+        <?php if ($security_msg !== ''): ?>
+          <div class="security-alert"><?= htmlspecialchars($security_msg) ?></div>
+        <?php endif; ?>
         <div id="profile-view">
           <p><strong>Username:</strong> <span id="view-username"><?= htmlspecialchars($provider_info['username']) ?></span></p>
           <p><strong>Phone:</strong> <span id="view-phone"><?= htmlspecialchars($provider_info['phone']) ?></span></p>
@@ -731,6 +753,28 @@ $stmt->close();
           <input type="file" id="profile_picture" name="profile_picture" accept="image/*">
           <button type="submit" name="save_profile">Save Changes</button>
         </form>
+
+        <div class="security-panel">
+          <div class="security-panel__head">
+            <div>
+              <h4>Two-Factor Authentication</h4>
+              <p class="security-panel__desc">
+                Add an extra layer of security. When enabled, a verification code is sent to your registered email on sign-in from new devices.
+              </p>
+              <?php if ($two_factor_on && $masked_account_email !== ''): ?>
+                <p class="security-panel__meta">Codes will be sent to <strong><?= htmlspecialchars($masked_account_email) ?></strong></p>
+              <?php endif; ?>
+            </div>
+            <form method="POST" action="provider-dashboard.php#profile" class="security-panel__form">
+              <input type="hidden" name="toggle_2fa" value="<?= $two_factor_on ? 'off' : 'on' ?>">
+              <label class="switch" title="Toggle two-factor authentication">
+                <input type="checkbox" <?= $two_factor_on ? 'checked' : '' ?> onchange="this.form.submit()">
+                <span class="slider"></span>
+              </label>
+              <span class="switch-text"><?= $two_factor_on ? 'Enabled' : 'Disabled' ?></span>
+            </form>
+          </div>
+        </div>
       </section>
     </div>
   </div>

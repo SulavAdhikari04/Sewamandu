@@ -5,6 +5,7 @@ if (session_status() === PHP_SESSION_NONE) {
 require_once '../components/Database.php';
 require_once '../components/OTP.php';
 require_once '../components/TrustedDevice.php';
+require_once '../components/TwoFactorAuth.php';
 
 // No pending verification -> back to login
 if (!isset($_SESSION['pending_otp'])) {
@@ -20,9 +21,11 @@ $messageClass = 'error';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Resend a fresh code
     if (isset($_POST['resend'])) {
-        $purpose = $context === 'register' ? 'complete your registration' : 'sign in to your account';
+        $purpose = $context === 'register' ? 'complete your registration' : 'complete your sign in';
         $code = startOtpSession($context, $pending['email'], $pending['name'], $pending['payload']);
-        $send = sendOtpEmail($pending['email'], $pending['name'], $code, $purpose);
+        $send = $context === 'register'
+            ? sendOtpEmail($pending['email'], $pending['name'], $code, $purpose)
+            : sendLoginVerificationCode($pending['email'], $pending['name'], $code);
         $pending = $_SESSION['pending_otp'];
         if (!empty($send['success'])) {
             $message = 'A new code has been sent to your email.';
@@ -87,8 +90,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $message = 'Error creating account: ' . $stmt->error;
                     $stmt->close();
                 }
-            } else { // login
+            } else { // login (2FA)
                 $d = $pending['payload'];
+                trustDeviceForUser($d['user_id']);
                 unset($_SESSION['pending_otp']);
                 closeDBConnection($conn);
                 completeUserLogin($d['user_id'], $d['username'], $d['role'], !empty($d['remember']));
@@ -124,8 +128,10 @@ $masked = maskEmail($pending['email']);
       <a href="home.php" class="auth-brand">Sewa<span>mandu</span></a>
       <div class="auth-aside__copy">
         <span class="eyebrow">Almost there</span>
-        <h2>Verify it's really you,<br><span class="grad">check your inbox</span></h2>
-        <p>We sent a 6-digit verification code to your email to keep your account secure.</p>
+        <h2>Verify it's really you,<br><span class="grad"><?= $context === 'register' ? 'check your inbox' : 'two-factor check' ?></span></h2>
+        <p><?= $context === 'register'
+            ? 'We sent a 6-digit verification code to your email to complete your registration.'
+            : 'Two-factor authentication is enabled on your account. Enter the code we sent to verify this sign-in.' ?></p>
       </div>
       <div class="auth-trust">
         <div><div class="num">10,000+</div><div class="lbl">Happy Customers</div></div>
@@ -136,8 +142,10 @@ $masked = maskEmail($pending['email']);
 
     <main class="auth-main">
       <div class="auth-card">
-        <h3>Enter verification code</h3>
-        <p class="sub">We emailed a 6-digit code to <strong><?= htmlspecialchars($masked) ?></strong>.</p>
+        <h3><?= $context === 'register' ? 'Enter verification code' : 'Two-factor verification' ?></h3>
+        <p class="sub"><?= $context === 'register'
+            ? 'We emailed a 6-digit code to <strong>' . htmlspecialchars($masked) . '</strong> to complete your registration.'
+            : 'We emailed a 6-digit code to <strong>' . htmlspecialchars($masked) . '</strong> to verify this sign-in.' ?></p>
 
         <?php if (!empty($message)): ?>
           <div class="auth-msg <?= $messageClass ?>"><?= htmlspecialchars($message) ?></div>

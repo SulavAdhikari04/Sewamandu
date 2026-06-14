@@ -1,6 +1,6 @@
 <?php
 /**
- * Trusted device helpers — skip login OTP on devices that completed registration.
+ * Trusted device helpers — skip login 2FA OTP on devices that completed registration or a prior 2FA sign-in.
  */
 
 if (!defined('TRUSTED_DEVICE_COOKIE')) {

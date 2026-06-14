@@ -3,6 +3,7 @@ require_once '../components/SessionManager.php';
 require_once '../components/Database.php';
 require_once '../components/BookingStatus.php';
 require_once '../components/StringHelpers.php';
+require_once '../components/TwoFactorAuth.php';
 
 // Add  cookies
 setcookie('customer_dashboard_visited', 'true', time() + (86400 * 30), "/");
@@ -18,6 +19,18 @@ if (!isset($_SESSION['user_id']) || !isset($_SESSION['role']) || $_SESSION['role
 $conn = getDBConnection();
 
 $user_id = $_SESSION['user_id'];
+ensureTwoFactorColumn($conn);
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['toggle_2fa'])) {
+    $enable = $_POST['toggle_2fa'] === 'on';
+    setTwoFactorEnabled($conn, $user_id, $enable);
+    $msg = $enable
+        ? 'Two-factor authentication has been enabled.'
+        : 'Two-factor authentication has been disabled.';
+    closeDBConnection($conn);
+    header('Location: customer-dashboard.php?security_msg=' . urlencode($msg) . '#profile');
+    exit;
+}
 
 if (isset($_GET['ajax']) && $_GET['ajax'] === 'pending_reviews') {
     header('Content-Type: application/json');
@@ -190,16 +203,22 @@ if ($row = $result->fetch_assoc()) {
 $stmt->close();
 
 // Fetch customer info from users table (ensure role is customer)
-$user_info = ['username' => '', 'phone' => '', 'id' => $user_id];
-$stmt = $conn->prepare("SELECT username, phone FROM users WHERE id = ? AND role = 'customer'");
+$user_info = ['username' => '', 'phone' => '', 'email' => '', 'two_factor_enabled' => 0, 'id' => $user_id];
+$stmt = $conn->prepare("SELECT username, phone, email, two_factor_enabled FROM users WHERE id = ? AND role = 'customer'");
 $stmt->bind_param("i", $user_id);
 $stmt->execute();
-$stmt->bind_result($username, $phone);
+$stmt->bind_result($username, $phone, $email, $two_factor_enabled);
 if ($stmt->fetch()) {
     $user_info['username'] = $username;
     $user_info['phone'] = $phone;
+    $user_info['email'] = $email;
+    $user_info['two_factor_enabled'] = (int) $two_factor_enabled;
 }
 $stmt->close();
+
+$security_msg = isset($_GET['security_msg']) ? trim($_GET['security_msg']) : '';
+$masked_account_email = $user_info['email'] !== '' ? maskEmail($user_info['email']) : '';
+$two_factor_on = $user_info['two_factor_enabled'] === 1;
 
 closeDBConnection($conn);
 ?>
@@ -382,6 +401,9 @@ closeDBConnection($conn);
 
       <section id="profile">
         <h3>My Profile</h3>
+        <?php if ($security_msg !== ''): ?>
+          <div class="security-alert"><?= htmlspecialchars($security_msg) ?></div>
+        <?php endif; ?>
         <div id="profile-view">
           <p><strong>Username:</strong> <span id="view-username"><?= htmlspecialchars($user_info['username']) ?></span></p>
           <p><strong>Phone:</strong> <span id="view-phone"><?= htmlspecialchars($user_info['phone']) ?></span></p>
@@ -402,6 +424,28 @@ closeDBConnection($conn);
           <input type="file" id="profile_picture" name="profile_picture" accept="image/*">
           <button type="submit" name="save_profile">Save Changes</button>
         </form>
+
+        <div class="security-panel">
+          <div class="security-panel__head">
+            <div>
+              <h4>Two-Factor Authentication</h4>
+              <p class="security-panel__desc">
+                Add an extra layer of security. When enabled, a verification code is sent to your registered email on sign-in from new devices.
+              </p>
+              <?php if ($two_factor_on && $masked_account_email !== ''): ?>
+                <p class="security-panel__meta">Codes will be sent to <strong><?= htmlspecialchars($masked_account_email) ?></strong></p>
+              <?php endif; ?>
+            </div>
+            <form method="POST" action="customer-dashboard.php#profile" class="security-panel__form">
+              <input type="hidden" name="toggle_2fa" value="<?= $two_factor_on ? 'off' : 'on' ?>">
+              <label class="switch" title="Toggle two-factor authentication">
+                <input type="checkbox" <?= $two_factor_on ? 'checked' : '' ?> onchange="this.form.submit()">
+                <span class="slider"></span>
+              </label>
+              <span class="switch-text"><?= $two_factor_on ? 'Enabled' : 'Disabled' ?></span>
+            </form>
+          </div>
+        </div>
       </section>
     </div>
   </div>

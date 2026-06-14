@@ -5,6 +5,7 @@ if (session_status() === PHP_SESSION_NONE) {
 require_once '../components/Database.php';
 require_once '../components/OTP.php';
 require_once '../components/TrustedDevice.php';
+require_once '../components/TwoFactorAuth.php';
 // Auto-login using cookie
 if (!isset($_SESSION['user_id']) && isset($_COOKIE['user_id'])) {
     $conn = getDBConnection();
@@ -45,17 +46,18 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     if (!$email || !$password) {
         $message = "Please fill in all fields.";
     } else {
-        $stmt = $conn->prepare("SELECT id, username, password, role FROM users WHERE email = ?");
+        $stmt = $conn->prepare("SELECT id, username, password, role, email FROM users WHERE email = ?");
         $stmt->bind_param("s", $email);
         $stmt->execute();
         $stmt->store_result();
         if ($stmt->num_rows === 1) {
-            $stmt->bind_result($id, $username, $hashed_password, $role);
+            $stmt->bind_result($id, $username, $hashed_password, $role, $user_email);
             $stmt->fetch();
             if (password_verify($password, $hashed_password)) {
                 $remember = isset($_POST['remember']);
+                ensureTwoFactorColumn($conn);
 
-                if (isDeviceTrustedForUser($id)) {
+                if (!userRequiresLoginOtp($conn, $id) || isDeviceTrustedForUser($id)) {
                     $stmt->close();
                     closeDBConnection($conn);
                     completeUserLogin($id, $username, $role, $remember);
@@ -67,8 +69,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                     'role'     => $role,
                     'remember' => $remember ? 1 : 0,
                 ];
-                $code = startOtpSession('login', $email, $username, $payload);
-                $send = sendOtpEmail($email, $username, $code, 'sign in to your account');
+                $code = startOtpSession('login', $user_email, $username, $payload);
+                $send = sendLoginVerificationCode($user_email, $username, $code);
                 if (!empty($send['success'])) {
                     $stmt->close();
                     closeDBConnection($conn);
