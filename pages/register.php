@@ -4,6 +4,7 @@ if (session_status() === PHP_SESSION_NONE) {
 }
 require_once '../components/Database.php';
 require_once '../components/EmailConfig_Gmail.php';
+require_once '../components/OTP.php';
 // Database connection
 $conn = getDBConnection();
 
@@ -43,33 +44,31 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         $stmt->store_result();
         if ($stmt->num_rows > 0) {
             $message = "Email already registered.";
+            $stmt->close();
         } else {
-            // Hash password
+            $stmt->close();
+            // Hash password and stash everything until the email OTP is verified
             $hashed_password = password_hash($password, PASSWORD_DEFAULT);
-            if ($role === 'provider') {
-                $stmt = $conn->prepare("INSERT INTO users (username, email, phone, password, role, provider_document, provider_document_name, status) VALUES (?, ?, ?, ?, ?, ?, ?, 'pending')");
-                $null = null;
-                $stmt->bind_param("sssssss", $name, $email, $phone, $hashed_password, $role, $fileData, $fileName);
-            } else {
-                $stmt = $conn->prepare("INSERT INTO users (username, email, phone, password, role, status) VALUES (?, ?, ?, ?, ?, 'active')");
-                $stmt->bind_param("sssss", $name, $email, $phone, $hashed_password, $role);
-            }
-            if ($stmt->execute()) {
-                // Send welcome email
-                $to = $email;
-                $subject = getWelcomeEmailSubject();
-                $email_content = generateWelcomeEmail($name, $role);
-                
-                $email_result = sendEmail($to, $subject, $email_content['text'], $email_content['html']);
-                
-                // Redirect to login.php after successful registration
-                header('Location: login.php?registered=1');
+            $payload = [
+                'name'      => $name,
+                'email'     => $email,
+                'phone'     => $phone,
+                'password'  => $hashed_password,
+                'role'      => $role,
+                'file_data' => $fileData,
+                'file_name' => $fileName,
+            ];
+            $code = startOtpSession('register', $email, $name, $payload);
+            $send = sendOtpEmail($email, $name, $code, 'complete your registration');
+            if (!empty($send['success'])) {
+                closeDBConnection($conn);
+                header('Location: verify-otp.php');
                 exit();
             } else {
-                $message = "Error: " . $stmt->error;
+                unset($_SESSION['pending_otp']);
+                $message = "Could not send verification code. Please try again.";
             }
         }
-        $stmt->close();
     }
 }
 closeDBConnection($conn);

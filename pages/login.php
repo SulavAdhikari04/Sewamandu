@@ -3,6 +3,7 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 require_once '../components/Database.php';
+require_once '../components/OTP.php';
 // Auto-login using cookie
 if (!isset($_SESSION['user_id']) && isset($_COOKIE['user_id'])) {
     $conn = getDBConnection();
@@ -51,26 +52,23 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             $stmt->bind_result($id, $username, $hashed_password, $role);
             $stmt->fetch();
             if (password_verify($password, $hashed_password)) {
-                // Set session variables if needed
-                $_SESSION['user_id'] = $id;
-                $_SESSION['username'] = $username;
-                $_SESSION['role'] = $role;
-                // Remember Me
-                if (isset($_POST['remember'])) {
-                    setcookie('user_id', $id, time() + (86400 * 30), "/"); // 30 days
-                }
-                // Redirect based on role
-                if ($role === 'admin') {
-                    header('Location: admin-dashboard.php');
-                    exit();
-                } elseif ($role === 'customer') {
-                    header('Location: customer-home.php');
-                    exit();
-                } elseif ($role === 'provider') {
-                    header('Location: provider-dashboard.php');
+                // Credentials OK -> require an email OTP before granting the session
+                $payload = [
+                    'user_id'  => $id,
+                    'username' => $username,
+                    'role'     => $role,
+                    'remember' => isset($_POST['remember']) ? 1 : 0,
+                ];
+                $code = startOtpSession('login', $email, $username, $payload);
+                $send = sendOtpEmail($email, $username, $code, 'sign in to your account');
+                if (!empty($send['success'])) {
+                    $stmt->close();
+                    closeDBConnection($conn);
+                    header('Location: verify-otp.php');
                     exit();
                 } else {
-                    $message = "Unknown user role.";
+                    unset($_SESSION['pending_otp']);
+                    $message = "Could not send verification code. Please try again.";
                 }
             } else {
                 $message = "Invalid email or password.";

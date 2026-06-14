@@ -19,8 +19,8 @@ define('EMAIL_REPLY_TO', 'officialsewamandu@gmail.com');
 // Gmail SMTP Configuration
 define('SMTP_HOST', 'smtp.gmail.com');
 define('SMTP_PORT', 587);
-define('SMTP_USERNAME', 'officialsewamandu@gmail.com'); // Your Gmail address
-define('SMTP_PASSWORD', 'kuugrcejbltwnhrh'); // Your Gmail app password
+define('SMTP_USERNAME', 'sauravshah1194@gmail.com'); // Your Gmail address
+define('SMTP_PASSWORD', 'qwphtsohwzxslwkm'); // Your Gmail app password
 define('USE_SMTP', true);
 
 /**
