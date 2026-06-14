@@ -4,6 +4,7 @@ if (session_status() === PHP_SESSION_NONE) {
 }
 require_once '../components/Database.php';
 require_once '../components/OTP.php';
+require_once '../components/TrustedDevice.php';
 // Auto-login using cookie
 if (!isset($_SESSION['user_id']) && isset($_COOKIE['user_id'])) {
     $conn = getDBConnection();
@@ -52,12 +53,19 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             $stmt->bind_result($id, $username, $hashed_password, $role);
             $stmt->fetch();
             if (password_verify($password, $hashed_password)) {
-                // Credentials OK -> require an email OTP before granting the session
+                $remember = isset($_POST['remember']);
+
+                if (isDeviceTrustedForUser($id)) {
+                    $stmt->close();
+                    closeDBConnection($conn);
+                    completeUserLogin($id, $username, $role, $remember);
+                }
+
                 $payload = [
                     'user_id'  => $id,
                     'username' => $username,
                     'role'     => $role,
-                    'remember' => isset($_POST['remember']) ? 1 : 0,
+                    'remember' => $remember ? 1 : 0,
                 ];
                 $code = startOtpSession('login', $email, $username, $payload);
                 $send = sendOtpEmail($email, $username, $code, 'sign in to your account');

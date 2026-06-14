@@ -5,6 +5,7 @@ error_reporting(E_ALL);
 require_once '../components/SessionManager.php';
 require_once '../components/Database.php';
 require_once '../components/BookingStatus.php';
+require_once '../components/StringHelpers.php';
 $all_services = [];
 if (session_status() === PHP_SESSION_NONE) {
 session_start();
@@ -152,7 +153,7 @@ if (isset($_POST['remove_service_id'])) {
 // Handle profile update for provider
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_profile'])) {
     $address = trim($_POST['address']);
-    $username = trim($_POST['username']);
+    $username = formatDisplayName($_POST['username'] ?? '');
     $phone = trim($_POST['phone']);
     $profile_picture_path = '';
     // Fetch current profile picture if exists
@@ -381,6 +382,7 @@ $stmt->close();
   <title>Provider Dashboard - Sewamandu</title>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="../css/provider-dashboard.css" />
+  <link rel="stylesheet" href="../css/form-utils.css" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
 </head>
 <body>
@@ -720,7 +722,7 @@ $stmt->close();
         </div>
         <form id="profile-form" method="POST" enctype="multipart/form-data" style="display: none;">
           <label for="username">Username:</label>
-          <input type="text" id="username" name="username" value="<?= htmlspecialchars($provider_info['username']) ?>" required>
+          <input type="text" id="username" name="username" value="<?= htmlspecialchars($provider_info['username']) ?>" data-capitalize="words" autocomplete="name" required>
           <label for="phone">Phone:</label>
           <input type="text" id="phone" name="phone" value="<?= htmlspecialchars($provider_info['phone']) ?>" required>
           <label for="address">Address:</label>
@@ -739,6 +741,7 @@ $stmt->close();
     </div>
   </footer>
 </body>
+<script src="../js/auto-capitalize.js"></script>
 <script>
   document.getElementById('edit-btn').addEventListener('click', () => {
     document.getElementById('profile-view').style.display = 'none';

@@ -2,6 +2,7 @@
 require_once '../components/SessionManager.php';
 require_once '../components/Database.php';
 require_once '../components/BookingStatus.php';
+require_once '../components/StringHelpers.php';
 
 // Add  cookies
 setcookie('customer_dashboard_visited', 'true', time() + (86400 * 30), "/");
@@ -131,7 +132,7 @@ $stmt->close();
 // Handle profile update for customer
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_profile'])) {
     $address = trim($_POST['address']);
-    $username = trim($_POST['username']);
+    $username = formatDisplayName($_POST['username'] ?? '');
     $phone = trim($_POST['phone']);
     $profile_picture_path = '';
     // Fetch current profile picture if exists
@@ -211,6 +212,7 @@ closeDBConnection($conn);
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../css/customer-dashboard.css">
+  <link rel="stylesheet" href="../css/form-utils.css">
   <link rel="stylesheet" href="../css/booking-status.css">
 </head>
 <body>
@@ -391,7 +393,7 @@ closeDBConnection($conn);
         </div>
         <form id="profile-form" method="POST" enctype="multipart/form-data" style="display: none;">
           <label for="username">Username:</label>
-          <input type="text" id="username" name="username" value="<?= htmlspecialchars($user_info['username']) ?>" required>
+          <input type="text" id="username" name="username" value="<?= htmlspecialchars($user_info['username']) ?>" data-capitalize="words" autocomplete="name" required>
           <label for="phone">Phone:</label>
           <input type="text" id="phone" name="phone" value="<?= htmlspecialchars($user_info['phone']) ?>" required>
           <label for="address">Address:</label>
@@ -595,4 +597,5 @@ window.addEventListener('click', (e) => {
   }
 });
 </script>
+<script src="../js/auto-capitalize.js"></script>
 </html>

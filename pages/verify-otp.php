@@ -4,6 +4,7 @@ if (session_status() === PHP_SESSION_NONE) {
 }
 require_once '../components/Database.php';
 require_once '../components/OTP.php';
+require_once '../components/TrustedDevice.php';
 
 // No pending verification -> back to login
 if (!isset($_SESSION['pending_otp'])) {
@@ -72,7 +73,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
 
                 if ($stmt->execute()) {
+                    $newUserId = (int) $conn->insert_id;
                     $stmt->close();
+                    trustDeviceForUser($newUserId);
                     // Welcome email (best effort)
                     $welcome = generateWelcomeEmail($d['name'], $d['role']);
                     sendEmail($d['email'], getWelcomeEmailSubject(), $welcome['text'], $welcome['html']);
@@ -86,22 +89,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
             } else { // login
                 $d = $pending['payload'];
-                $_SESSION['user_id'] = $d['user_id'];
-                $_SESSION['username'] = $d['username'];
-                $_SESSION['role'] = $d['role'];
-                if (!empty($d['remember'])) {
-                    setcookie('user_id', $d['user_id'], time() + (86400 * 30), "/");
-                }
                 unset($_SESSION['pending_otp']);
                 closeDBConnection($conn);
-                if ($d['role'] === 'admin') {
-                    header('Location: admin-dashboard.php');
-                } elseif ($d['role'] === 'provider') {
-                    header('Location: provider-dashboard.php');
-                } else {
-                    header('Location: customer-home.php');
-                }
-                exit();
+                completeUserLogin($d['user_id'], $d['username'], $d['role'], !empty($d['remember']));
             }
             closeDBConnection($conn);
         }

@@ -5,6 +5,7 @@ if (session_status() === PHP_SESSION_NONE) {
 require_once '../components/Database.php';
 require_once '../components/EmailConfig_Gmail.php';
 require_once '../components/OTP.php';
+require_once '../components/StringHelpers.php';
 // Database connection
 $conn = getDBConnection();
 
@@ -12,7 +13,7 @@ $message = "";
 $error = [];
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    $name = trim($_POST['name']);
+    $name = formatDisplayName($_POST['name'] ?? '');
     $email = trim($_POST['email']);
     $email=strtolower($email);
     $phone = trim($_POST['phone']);
@@ -82,6 +83,7 @@ closeDBConnection($conn);
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../css/auth.css" />
+  <link rel="stylesheet" href="../css/form-utils.css" />
 </head>
 <body>
   <div class="auth-wrap">
@@ -126,7 +128,7 @@ closeDBConnection($conn);
           <div class="auth-field">
             <label for="name">Full Name</label>
             <div class="input-shell">
-              <input type="text" id="name" name="name" placeholder="Enter your name" required />
+              <input type="text" id="name" name="name" placeholder="Enter your name" data-capitalize="words" autocomplete="name" required />
               <i class="fas fa-user"></i>
             </div>
           </div>
@@ -193,6 +195,7 @@ closeDBConnection($conn);
 
   </div>
 
+  <script src="../js/auto-capitalize.js"></script>
   <script>
   document.getElementById('role').addEventListener('change', function() {
     var docUpload = document.getElementById('provider-doc-upload');

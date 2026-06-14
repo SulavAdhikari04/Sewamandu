@@ -5,6 +5,7 @@ error_reporting(E_ALL);
 require_once '../components/SessionManager.php';
 require_once '../components/Database.php';
 require_once '../components/BookingStatus.php';
+require_once '../components/StringHelpers.php';
 
 // Add cookies
 setcookie('admin_dashboard_visited', 'true', time() + (86400 * 30), "/");
@@ -50,7 +51,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['booking_id'], $_POST[
 
 // Handle add service form submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_service'])) {
-    $service_name = trim($_POST['service_name']);
+    $service_name = formatDisplayName($_POST['service_name'] ?? '');
     $service_desc = trim($_POST['service_desc']);
     if ($service_name && $service_desc) {
         // Check for duplicate service name
@@ -257,6 +258,7 @@ while ($row = $result->fetch_assoc()) {
   <meta charset="UTF-8">
   <title>Admin Dashboard - Sewamandu</title>
   <link rel="stylesheet" href="../css/admin-dashboard.css?v=1.0.1">
+  <link rel="stylesheet" href="../css/form-utils.css">
   <link rel="stylesheet" href="../css/booking-status.css">
 </head>
 <body>
@@ -400,7 +402,7 @@ while ($row = $result->fetch_assoc()) {
   <form method="POST" action="" style="margin-bottom: 20px;">
     <input type="hidden" name="add_service" value="1">
     <label for="service_name">Service Name:</label>
-    <input type="text" id="service_name" name="service_name" required>
+    <input type="text" id="service_name" name="service_name" data-capitalize="words" required>
     <label for="service_desc">Description:</label>
     <input type="text" id="service_desc" name="service_desc" required>
     <button type="submit">Add Service</button>
@@ -570,6 +572,7 @@ document.addEventListener('DOMContentLoaded', function() {
   });
 });
 </script>
+<script src="../js/auto-capitalize.js"></script>
 
 </body>
 </html>
