@@ -25,29 +25,6 @@ if ($conn->connect_error) {
 }
 
 $message = '';
-// Handle Approve/Reject actions for bookings
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['booking_id'], $_POST['booking_action'])) {
-    $booking_id = intval($_POST['booking_id']);
-    if ($_POST['booking_action'] === 'approve') {
-        $stmt = $conn->prepare("UPDATE bookings SET status = 'confirmed' WHERE id = ? AND status = 'pending_admin'");
-        $stmt->bind_param("i", $booking_id);
-        if ($stmt->execute()) {
-            $message = 'Booking approved and confirmed.';
-        } else {
-            $message = 'Error: ' . $stmt->error;
-        }
-        $stmt->close();
-    } elseif ($_POST['booking_action'] === 'reject') {
-        $stmt = $conn->prepare("UPDATE bookings SET status = 'rejected_by_admin' WHERE id = ? AND status = 'pending_admin'");
-        $stmt->bind_param("i", $booking_id);
-        if ($stmt->execute()) {
-            $message = 'Booking rejected by admin.';
-        } else {
-            $message = 'Error: ' . $stmt->error;
-        }
-        $stmt->close();
-    }
-}
 
 // Handle add service form submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_service'])) {
@@ -173,23 +150,6 @@ $result = $conn->query("SELECT id, username, email, role, created_at, status, pr
 while ($row = $result->fetch_assoc()) {
     $users[] = $row;
 }
-
-// Fetch provider-approved bookings (pending admin approval)
-$provider_approved_bookings = [];
-$sql = "SELECT b.id AS booking_id, s.name AS service_name, u.username AS customer_name, p.username AS provider_name, b.service_date, b.status AS booking_status
-        FROM bookings b
-        JOIN services s ON b.service_id = s.id
-        JOIN users u ON b.customer_id = u.id
-        JOIN users p ON b.provider_id = p.id
-        WHERE b.status = 'pending_admin'
-        ORDER BY b.service_date DESC";
-$stmt = $conn->prepare($sql);
-$stmt->execute();
-$result = $stmt->get_result();
-while ($row = $result->fetch_assoc()) {
-    $provider_approved_bookings[] = $row;
-}
-$stmt->close();
 
 // Fetch all bookings for status tracking
 $all_approved_bookings = [];
@@ -428,39 +388,6 @@ while ($row = $result->fetch_assoc()) {
   </table>
 
   <h3 id="booking">Booking Management</h3>
-  <table>
-    <thead>
-      <tr><th>ID</th><th>Service</th><th>Customer</th><th>Provider</th><th>Date</th><th>Status</th><th>Actions</th></tr>
-    </thead>
-    <tbody>
-      <?php foreach ($provider_approved_bookings as $row): ?>
-      <tr>
-        <td><?= (int) $row['booking_id'] ?></td>
-        <td><?= htmlspecialchars($row['service_name']) ?></td>
-        <td><?= htmlspecialchars($row['customer_name']) ?></td>
-        <td><?= htmlspecialchars($row['provider_name']) ?></td>
-        <td><?= htmlspecialchars($row['service_date']) ?></td>
-        <td>
-          <span class="<?= getBookingStatusBadgeClass($row['booking_status']) ?>">
-            <?= htmlspecialchars(getBookingStatusLabel($row['booking_status'])) ?>
-          </span>
-        </td>
-        <td>
-          <form method="POST" style="display:inline;">
-            <input type="hidden" name="booking_id" value="<?= $row['booking_id'] ?>">
-            <button type="submit" name="booking_action" value="approve">Approve</button>
-          </form>
-          <form method="POST" style="display:inline;">
-            <input type="hidden" name="booking_id" value="<?= $row['booking_id'] ?>">
-            <button type="submit" name="booking_action" value="reject">Reject</button>
-          </form>
-        </td>
-      </tr>
-      <?php endforeach; ?>
-    </tbody>
-  </table>
-
-  <h3>All Bookings</h3>
   <table>
     <thead>
       <tr><th>ID</th><th>Service</th><th>Customer</th><th>Provider</th><th>Date</th><th>Status</th><th>Reviews</th></tr>

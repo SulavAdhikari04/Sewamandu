@@ -78,22 +78,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['booking_id'], $_POST[
     $booking_id = intval($_POST['booking_id']);
     if ($_POST['action'] === 'approve') {
         // Only update if current status is 'pending_provider'
-        $stmt = $conn->prepare("SELECT status FROM bookings WHERE id = ?");
-        $stmt->bind_param("i", $booking_id);
+        $stmt = $conn->prepare("SELECT status FROM bookings WHERE id = ? AND provider_id = ?");
+        $stmt->bind_param("ii", $booking_id, $provider_user_id);
         $stmt->execute();
         $stmt->bind_result($current_status);
         $stmt->fetch();
         $stmt->close();
         if ($current_status === 'pending_provider') {
-            $stmt = $conn->prepare("UPDATE bookings SET status = 'pending_admin' WHERE id = ?");
-            $stmt->bind_param("i", $booking_id);
+            $stmt = $conn->prepare("UPDATE bookings SET status = 'confirmed' WHERE id = ? AND provider_id = ?");
+            $stmt->bind_param("ii", $booking_id, $provider_user_id);
             $stmt->execute();
             $stmt->close();
-            $message = 'Booking approved and sent to admin.';
+            $message = 'Booking approved and confirmed.';
         }
     } elseif ($_POST['action'] === 'reject') {
-        $stmt = $conn->prepare("UPDATE bookings SET status = 'rejected_by_provider' WHERE id = ?");
-        $stmt->bind_param("i", $booking_id);
+        $stmt = $conn->prepare("UPDATE bookings SET status = 'rejected_by_provider' WHERE id = ? AND provider_id = ?");
+        $stmt->bind_param("ii", $booking_id, $provider_user_id);
         $stmt->execute();
         $stmt->close();
         $message = 'Booking rejected.';
@@ -793,4 +793,3 @@ $stmt->close();
   });
 </script>
 </html>
-

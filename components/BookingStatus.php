@@ -114,7 +114,7 @@ function getBookingStatusLabel($status) {
         case 'pending_provider':
             return 'Waiting for Provider';
         case 'pending_admin':
-            return 'Waiting for Admin';
+            return 'Confirmed';
         case 'confirmed':
             return 'Confirmed';
         case 'completed':
@@ -145,7 +145,7 @@ function updateProviderBookingCompletion($conn, $booking_id, $provider_id, $comp
     }
     $check->close();
 
-    if ($current_status !== 'confirmed') {
+    if (!in_array($current_status, ['confirmed', 'pending_admin'], true)) {
         return ['success' => false, 'message' => 'Only confirmed bookings can be marked done or not done.'];
     }
 
@@ -185,7 +185,7 @@ function getBookingStatusBadgeClass($status) {
         case 'pending_provider':
             return 'status-badge status-pending-provider';
         case 'pending_admin':
-            return 'status-badge status-pending-admin';
+            return 'status-badge status-confirmed';
         case 'confirmed':
             return 'status-badge status-confirmed';
         case 'completed':
