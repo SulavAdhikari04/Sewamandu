@@ -128,8 +128,8 @@ sewamandu/
    http://localhost/sewamandu/pages/home.php
    ```
 ## Contact
- Email: sulavadhikari69@gmail.com
- Phone: +977-9761610717
+- **Email** — sulavadhikari69@gmail.com
+- **Number** — 9761610717
  
 ---
-© 2025–2026 Sewamandu. All rights reserved.
+© 2025–2026 Sewamandu. All rights not reserved.
