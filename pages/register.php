@@ -136,7 +136,7 @@ closeDBConnection($conn);
           <div class="auth-field">
             <label for="email">Email</label>
             <div class="input-shell">
-              <input type="email" id="email" name="email" placeholder="you@example.com" required />
+              <input type="email" id="email" name="email" placeholder="you@example.com" pattern="[a-zA-Z._%+\-]+@[a-zA-Z.\-]+\.[a-zA-Z]{2,}" title="Enter a valid email (e.g. you@example.com)" required />
               <i class="fas fa-envelope"></i>
             </div>
           </div>
@@ -144,7 +144,7 @@ closeDBConnection($conn);
           <div class="auth-field">
             <label for="phone">Phone Number</label>
             <div class="input-shell">
-              <input type="text" id="phone" name="phone" placeholder="98XXXXXXXX" pattern="98[0-9]{8}" title="Phone number must start with 98 and be 10 digits long" required />
+              <input type="text" id="phone" name="phone" placeholder="97/98XXXXXXXX" pattern="9[78][0-9]{8}" title="Phone number must start with 97 or 98 and be 10 digits long" required />
               <i class="fas fa-phone"></i>
             </div>
           </div>
