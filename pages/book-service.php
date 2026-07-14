@@ -15,6 +15,93 @@ if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'customer') {
 $conn = getDBConnection();
 // Ensure the availability toggle column exists (MariaDB supports IF NOT EXISTS)
 $conn->query("ALTER TABLE users ADD COLUMN IF NOT EXISTS is_available TINYINT(1) NOT NULL DEFAULT 1");
+ensureBookingLocationColumns($conn);
+
+function nominatimRequest($url) {
+    if (function_exists('curl_init')) {
+        $ch = curl_init($url);
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_TIMEOUT => 8,
+            CURLOPT_HTTPHEADER => [
+                'User-Agent: Sewamandu/1.0 (local booking app)',
+                'Accept: application/json',
+            ],
+        ]);
+        $body = curl_exec($ch);
+        $code = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+        if ($body === false || $code < 200 || $code >= 300) {
+            return null;
+        }
+        return json_decode($body, true);
+    }
+
+    $context = stream_context_create([
+        'http' => [
+            'method' => 'GET',
+            'header' => "User-Agent: Sewamandu/1.0 (local booking app)\r\nAccept: application/json\r\n",
+            'timeout' => 8,
+        ],
+    ]);
+    $body = @file_get_contents($url, false, $context);
+    if ($body === false) {
+        return null;
+    }
+    return json_decode($body, true);
+}
+
+if (isset($_GET['ajax']) && $_GET['ajax'] === 'place_search') {
+    header('Content-Type: application/json');
+    $q = trim($_GET['q'] ?? '');
+    if (strlen($q) < 2) {
+        echo json_encode([]);
+        closeDBConnection($conn);
+        exit();
+    }
+    $url = 'https://nominatim.openstreetmap.org/search?' . http_build_query([
+        'q' => $q,
+        'format' => 'json',
+        'addressdetails' => 1,
+        'limit' => 6,
+        'countrycodes' => 'np',
+    ]);
+    $data = nominatimRequest($url);
+    $results = [];
+    if (is_array($data)) {
+        foreach ($data as $row) {
+            $results[] = [
+                'label' => $row['display_name'] ?? '',
+                'lat' => isset($row['lat']) ? (float) $row['lat'] : null,
+                'lng' => isset($row['lon']) ? (float) $row['lon'] : null,
+            ];
+        }
+    }
+    echo json_encode($results);
+    closeDBConnection($conn);
+    exit();
+}
+
+if (isset($_GET['ajax']) && $_GET['ajax'] === 'reverse_geocode') {
+    header('Content-Type: application/json');
+    $coords = parseBookingCoordinates($_GET['lat'] ?? null, $_GET['lng'] ?? null);
+    if (!$coords) {
+        echo json_encode(['error' => 'Invalid coordinates.']);
+        closeDBConnection($conn);
+        exit();
+    }
+    $url = 'https://nominatim.openstreetmap.org/reverse?' . http_build_query([
+        'lat' => $coords['latitude'],
+        'lon' => $coords['longitude'],
+        'format' => 'json',
+    ]);
+    $data = nominatimRequest($url);
+    echo json_encode([
+        'label' => is_array($data) ? ($data['display_name'] ?? '') : '',
+    ]);
+    closeDBConnection($conn);
+    exit();
+}
 
 function enrichProvidersWithStats($conn, array &$providers) {
     if (empty($providers)) {
@@ -195,6 +282,7 @@ while ($row = $result->fetch_assoc()) {
 $providers = [];
 $show_providers = false;
 $service_id = $service_date = $service_time = $address = '';
+$latitude = $longitude = $location_label = '';
 
 // Pre-select a service when arriving from a "Our Services" card (?service_id=)
 if ($_SERVER["REQUEST_METHOD"] !== "POST" && isset($_GET['service_id'])) {
@@ -205,13 +293,25 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['show_providers'])) {
     $service_id = intval($_POST['service_id']);
     $service_date = $_POST['date'];
     $service_time = $_POST['time'] ?? '';
-    $address = $_POST['address'];
-    $providers = fetchAvailableProviders($conn, $service_id, $service_date, $service_time);
-    if (count($providers) === 0) {
-        $message = $no_providers_message;
+    $address = trim($_POST['address'] ?? '');
+    $latitude = trim($_POST['latitude'] ?? '');
+    $longitude = trim($_POST['longitude'] ?? '');
+    $location_label = trim($_POST['location_label'] ?? '');
+    $coords = parseBookingCoordinates($latitude, $longitude);
+
+    if (!$coords) {
+        $message = 'Please pin your service location on the map or search for a place.';
         $message_type = 'error';
+    } else {
+        $latitude = (string) $coords['latitude'];
+        $longitude = (string) $coords['longitude'];
+        $providers = fetchAvailableProviders($conn, $service_id, $service_date, $service_time);
+        if (count($providers) === 0) {
+            $message = $no_providers_message;
+            $message_type = 'error';
+        }
+        $show_providers = true;
     }
-    $show_providers = true;
 }
 
 // Step 2: Handle booking with selected provider
@@ -221,19 +321,43 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['book_with_provider']))
     $provider_id = intval($_POST['provider_id']);
     $service_date = $_POST['date'];
     $service_time = $_POST['time'] ?? '';
-    $address = $_POST['address'];
+    $address = trim($_POST['address'] ?? '');
+    $latitude = trim($_POST['latitude'] ?? '');
+    $longitude = trim($_POST['longitude'] ?? '');
+    $location_label = trim($_POST['location_label'] ?? '');
+    $coords = parseBookingCoordinates($latitude, $longitude);
     $booking_date = date('Y-m-d');
     $status = 'pending_provider';
 
-    if (!isProviderTimeSlotAvailable($conn, $provider_id, $service_date, $service_time)) {
+    if (!$coords) {
+        $message = 'Service location is missing. Please go back and pin a location on the map.';
+        $message_type = 'error';
+    } elseif (!isProviderTimeSlotAvailable($conn, $provider_id, $service_date, $service_time)) {
         $message = 'This provider is already booked at the selected date and time. Please choose another provider or time slot.';
         $message_type = 'error';
         $show_providers = true;
-
         $providers = fetchAvailableProviders($conn, $service_id, $service_date, $service_time);
     } else {
-        $stmt = $conn->prepare("INSERT INTO bookings (customer_id, service_id, status, booking_date, service_date, service_time, address, provider_id, served) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULL)");
-        $stmt->bind_param("iisssssi", $customer_id, $service_id, $status, $booking_date, $service_date, $service_time, $address, $provider_id);
+        $lat_val = $coords['latitude'];
+        $lng_val = $coords['longitude'];
+        $stmt = $conn->prepare(
+            "INSERT INTO bookings (customer_id, service_id, status, booking_date, service_date, service_time, address, latitude, longitude, location_label, provider_id, served)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL)"
+        );
+        $stmt->bind_param(
+            "iisssssddsi",
+            $customer_id,
+            $service_id,
+            $status,
+            $booking_date,
+            $service_date,
+            $service_time,
+            $address,
+            $lat_val,
+            $lng_val,
+            $location_label,
+            $provider_id
+        );
         if ($stmt->execute()) {
             $message = "Booking request sent!";
             $message_type = 'success';
@@ -256,6 +380,8 @@ closeDBConnection($conn);
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../css/auth.css" />
   <link rel="stylesheet" href="../css/booking.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 </head>
 <body>
   <div class="book-bg" aria-hidden="true"></div>
@@ -359,8 +485,38 @@ closeDBConnection($conn);
         </div>
 
         <div class="auth-field">
-          <label for="address">Your Address</label>
-          <textarea id="address" name="address" placeholder="Street, area, city…" required><?= htmlspecialchars($address) ?></textarea>
+          <label for="location-search">Pin your location</label>
+          <div class="location-picker">
+            <div class="location-search-row">
+              <div class="location-search-wrap">
+                <i class="fas fa-magnifying-glass"></i>
+                <input type="text" id="location-search" placeholder="Search an area or landmark…" autocomplete="off" value="<?= htmlspecialchars($location_label) ?>">
+                <ul id="location-suggestions" class="location-suggestions" hidden></ul>
+              </div>
+              <button type="button" id="use-my-location" class="location-gps-btn" title="Use my current location">
+                <i class="fas fa-location-crosshairs"></i>
+              </button>
+            </div>
+            <div id="booking-map" class="booking-map" aria-label="Map to pin service location"></div>
+            <p class="location-hint">Search, use GPS, or tap the map to place the pin. Drag to adjust.</p>
+            <p id="location-selected" class="location-selected<?= $location_label || ($latitude && $longitude) ? '' : ' empty' ?>">
+              <?php if ($location_label): ?>
+                <i class="fas fa-map-pin"></i> <?= htmlspecialchars($location_label) ?>
+              <?php elseif ($latitude && $longitude): ?>
+                <i class="fas fa-map-pin"></i> <?= htmlspecialchars(number_format((float)$latitude, 5) . ', ' . number_format((float)$longitude, 5)) ?>
+              <?php else: ?>
+                No location pinned yet
+              <?php endif; ?>
+            </p>
+            <input type="hidden" name="latitude" id="latitude" value="<?= htmlspecialchars($latitude) ?>">
+            <input type="hidden" name="longitude" id="longitude" value="<?= htmlspecialchars($longitude) ?>">
+            <input type="hidden" name="location_label" id="location_label" value="<?= htmlspecialchars($location_label) ?>">
+          </div>
+        </div>
+
+        <div class="auth-field">
+          <label for="address">Address details <span class="optional-label">(landmarks, flat, gate)</span></label>
+          <textarea id="address" name="address" placeholder="e.g. Near city mall, 3rd floor, blue gate"><?= htmlspecialchars($address) ?></textarea>
         </div>
 
         <button type="submit" name="show_providers" class="auth-btn">Show Providers <i class="fas fa-arrow-right"></i></button>
@@ -377,6 +533,18 @@ closeDBConnection($conn);
             <input type="hidden" name="date" value="<?= htmlspecialchars($service_date) ?>">
             <input type="hidden" name="time" value="<?= htmlspecialchars($service_time) ?>">
             <input type="hidden" name="address" value="<?= htmlspecialchars($address) ?>">
+            <input type="hidden" name="latitude" value="<?= htmlspecialchars($latitude) ?>">
+            <input type="hidden" name="longitude" value="<?= htmlspecialchars($longitude) ?>">
+            <input type="hidden" name="location_label" value="<?= htmlspecialchars($location_label) ?>">
+            <?php if ($location_label || ($latitude && $longitude)): ?>
+              <p class="location-confirm">
+                <i class="fas fa-map-marker-alt"></i>
+                <?= htmlspecialchars($location_label ?: ($latitude . ', ' . $longitude)) ?>
+                <?php if ($address): ?>
+                  <span>· <?= htmlspecialchars($address) ?></span>
+                <?php endif; ?>
+              </p>
+            <?php endif; ?>
             <span class="provider-label">Select a Provider</span>
             <div class="provider-cards">
               <?php foreach ($providers as $provider): ?>
@@ -433,6 +601,195 @@ closeDBConnection($conn);
   </div>
 
   <script>
+    (function () {
+      const mapEl = document.getElementById('booking-map');
+      if (!mapEl || typeof L === 'undefined') return;
+
+      const latInput = document.getElementById('latitude');
+      const lngInput = document.getElementById('longitude');
+      const labelInput = document.getElementById('location_label');
+      const searchInput = document.getElementById('location-search');
+      const suggestionsEl = document.getElementById('location-suggestions');
+      const selectedEl = document.getElementById('location-selected');
+      const gpsBtn = document.getElementById('use-my-location');
+      const form = document.getElementById('booking-form');
+
+      const defaultCenter = [27.7172, 85.3240];
+      const startLat = parseFloat(latInput.value);
+      const startLng = parseFloat(lngInput.value);
+      const hasStart = Number.isFinite(startLat) && Number.isFinite(startLng);
+
+      const map = L.map(mapEl).setView(hasStart ? [startLat, startLng] : defaultCenter, hasStart ? 16 : 13);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '&copy; OpenStreetMap'
+      }).addTo(map);
+
+      let marker = null;
+      let searchTimer = null;
+      let reverseTimer = null;
+      let suppressSearch = false;
+
+      function setSelectedText(text) {
+        if (!selectedEl) return;
+        if (text) {
+          selectedEl.classList.remove('empty');
+          selectedEl.textContent = '';
+          const icon = document.createElement('i');
+          icon.className = 'fas fa-map-pin';
+          selectedEl.appendChild(icon);
+          selectedEl.appendChild(document.createTextNode(' ' + text));
+        } else {
+          selectedEl.classList.add('empty');
+          selectedEl.textContent = 'No location pinned yet';
+        }
+      }
+
+      function setPin(lat, lng, label, skipReverse) {
+        latInput.value = Number(lat).toFixed(7);
+        lngInput.value = Number(lng).toFixed(7);
+        if (typeof label === 'string') {
+          labelInput.value = label;
+          if (searchInput && label) {
+            suppressSearch = true;
+            searchInput.value = label;
+            suppressSearch = false;
+          }
+          setSelectedText(label || (Number(lat).toFixed(5) + ', ' + Number(lng).toFixed(5)));
+        } else {
+          labelInput.value = '';
+          setSelectedText(Number(lat).toFixed(5) + ', ' + Number(lng).toFixed(5));
+        }
+
+        if (marker) {
+          marker.setLatLng([lat, lng]);
+        } else {
+          marker = L.marker([lat, lng], { draggable: true }).addTo(map);
+          marker.on('dragend', function (e) {
+            const p = e.target.getLatLng();
+            setPin(p.lat, p.lng, null, false);
+          });
+        }
+        map.setView([lat, lng], Math.max(map.getZoom(), 16));
+
+        if (!skipReverse && !label) {
+          clearTimeout(reverseTimer);
+          reverseTimer = setTimeout(function () {
+            fetch('book-service.php?ajax=reverse_geocode&lat=' + encodeURIComponent(lat) + '&lng=' + encodeURIComponent(lng))
+              .then(function (r) { return r.json(); })
+              .then(function (data) {
+                if (data && data.label) {
+                  labelInput.value = data.label;
+                  setSelectedText(data.label);
+                  if (searchInput) {
+                    suppressSearch = true;
+                    searchInput.value = data.label;
+                    suppressSearch = false;
+                  }
+                }
+              })
+              .catch(function () {});
+          }, 400);
+        }
+      }
+
+      if (hasStart) {
+        setPin(startLat, startLng, labelInput.value || null, true);
+      }
+
+      map.on('click', function (e) {
+        setPin(e.latlng.lat, e.latlng.lng, null, false);
+        if (suggestionsEl) suggestionsEl.hidden = true;
+      });
+
+      if (gpsBtn) {
+        gpsBtn.addEventListener('click', function () {
+          if (!navigator.geolocation) {
+            alert('Geolocation is not supported by this browser.');
+            return;
+          }
+          gpsBtn.disabled = true;
+          navigator.geolocation.getCurrentPosition(
+            function (pos) {
+              gpsBtn.disabled = false;
+              setPin(pos.coords.latitude, pos.coords.longitude, null, false);
+            },
+            function () {
+              gpsBtn.disabled = false;
+              alert('Could not get your location. Allow location access or pin the map manually.');
+            },
+            { enableHighAccuracy: true, timeout: 10000 }
+          );
+        });
+      }
+
+      function hideSuggestions() {
+        if (!suggestionsEl) return;
+        suggestionsEl.hidden = true;
+        suggestionsEl.innerHTML = '';
+      }
+
+      function showSuggestions(items) {
+        if (!suggestionsEl) return;
+        suggestionsEl.innerHTML = '';
+        if (!items.length) {
+          hideSuggestions();
+          return;
+        }
+        items.forEach(function (item) {
+          const li = document.createElement('li');
+          li.textContent = item.label;
+          li.addEventListener('click', function () {
+            if (item.lat == null || item.lng == null) return;
+            setPin(item.lat, item.lng, item.label, true);
+            hideSuggestions();
+          });
+          suggestionsEl.appendChild(li);
+        });
+        suggestionsEl.hidden = false;
+      }
+
+      if (searchInput) {
+        searchInput.addEventListener('input', function () {
+          if (suppressSearch) return;
+          const q = searchInput.value.trim();
+          clearTimeout(searchTimer);
+          if (q.length < 2) {
+            hideSuggestions();
+            return;
+          }
+          searchTimer = setTimeout(function () {
+            fetch('book-service.php?ajax=place_search&q=' + encodeURIComponent(q))
+              .then(function (r) { return r.json(); })
+              .then(function (data) {
+                showSuggestions(Array.isArray(data) ? data : []);
+              })
+              .catch(function () { hideSuggestions(); });
+          }, 350);
+        });
+
+        searchInput.addEventListener('keydown', function (e) {
+          if (e.key === 'Escape') hideSuggestions();
+        });
+      }
+
+      document.addEventListener('click', function (e) {
+        if (!e.target.closest('.location-search-wrap')) hideSuggestions();
+      });
+
+      if (form) {
+        form.addEventListener('submit', function (e) {
+          if (!latInput.value || !lngInput.value) {
+            e.preventDefault();
+            alert('Please pin your service location on the map or search for a place.');
+            mapEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+        });
+      }
+
+      setTimeout(function () { map.invalidateSize(); }, 100);
+    })();
+
     (function () {
       const modal = document.getElementById('provider-profile-modal');
       if (!modal) return;

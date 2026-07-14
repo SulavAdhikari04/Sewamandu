@@ -29,6 +29,7 @@ $conn->query("ALTER TABLE users ADD COLUMN IF NOT EXISTS is_available TINYINT(1)
 // Ensure the wallet balance column exists
 $conn->query("ALTER TABLE users ADD COLUMN IF NOT EXISTS wallet_balance DECIMAL(10,2) NOT NULL DEFAULT 0.00");
 ensureTwoFactorColumn($conn);
+ensureBookingLocationColumns($conn);
 
 // Handle 2FA toggle
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['toggle_2fa'])) {
@@ -301,7 +302,8 @@ $result->close();
 
 // Fetch only booking requests from customers (pending_provider) for this provider
 $customer_requests = [];
-$sql = "SELECT b.id AS booking_id, u.username AS customer_name, s.name AS service_name, b.service_date, b.service_time, b.status
+$sql = "SELECT b.id AS booking_id, u.username AS customer_name, s.name AS service_name, b.service_date, b.service_time, b.status,
+               b.address, b.latitude, b.longitude, b.location_label
         FROM bookings b
         JOIN services s ON b.service_id = s.id
         JOIN users u ON b.customer_id = u.id
@@ -318,7 +320,8 @@ $stmt->close();
 
 // Fetch all bookings for this provider (any status)
 $accepted_bookings = [];
-$sql = "SELECT b.id AS booking_id, u.username AS customer_name, s.name AS service_name, b.service_date, b.status AS booking_status, b.served
+$sql = "SELECT b.id AS booking_id, u.username AS customer_name, s.name AS service_name, b.service_date, b.status AS booking_status, b.served,
+               b.address, b.latitude, b.longitude, b.location_label
         FROM bookings b
         JOIN services s ON b.service_id = s.id
         JOIN users u ON b.customer_id = u.id
@@ -403,6 +406,8 @@ $stmt->close();
   <link rel="stylesheet" href="../css/provider-dashboard.css" />
   <link rel="stylesheet" href="../css/form-utils.css" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 </head>
 <body>
   <div class="layout">
@@ -576,6 +581,16 @@ $stmt->close();
                 <span class="<?= getBookingStatusBadgeClass($row['status']) ?>"><?= htmlspecialchars(getBookingStatusLabel($row['status'])) ?></span>
               </td>
               <td>
+                <?php if ($row['latitude'] !== null && $row['longitude'] !== null && $row['latitude'] !== '' && $row['longitude'] !== ''): ?>
+                  <button type="button"
+                    class="see-location-btn"
+                    data-lat="<?= htmlspecialchars((string) $row['latitude']) ?>"
+                    data-lng="<?= htmlspecialchars((string) $row['longitude']) ?>"
+                    data-label="<?= htmlspecialchars($row['location_label'] ?? '') ?>"
+                    data-address="<?= htmlspecialchars($row['address'] ?? '') ?>">
+                    <i class="fas fa-map-marker-alt"></i> See location
+                  </button>
+                <?php endif; ?>
                 <form method="POST" style="display:inline;">
                   <input type="hidden" name="booking_id" value="<?= $row['booking_id'] ?>">
                   <button type="submit" name="action" value="approve">Approve</button>
@@ -668,7 +683,7 @@ $stmt->close();
         <h3>Bookings</h3>
         <table>
           <thead>
-            <tr><th>Customer</th><th>Service</th><th>Date</th><th>Status</th></tr>
+            <tr><th>Customer</th><th>Service</th><th>Date</th><th>Status</th><th>Location</th></tr>
           </thead>
           <tbody>
             <?php foreach ($accepted_bookings as $row): ?>
@@ -685,6 +700,20 @@ $stmt->close();
                       <button type="submit" name="completion_action" value="done">Done</button>
                       <button type="submit" name="completion_action" value="not_done">Not Done</button>
                     </form>
+                  <?php endif; ?>
+                </td>
+                <td>
+                  <?php if ($row['latitude'] !== null && $row['longitude'] !== null && $row['latitude'] !== '' && $row['longitude'] !== ''): ?>
+                    <button type="button"
+                      class="see-location-btn"
+                      data-lat="<?= htmlspecialchars((string) $row['latitude']) ?>"
+                      data-lng="<?= htmlspecialchars((string) $row['longitude']) ?>"
+                      data-label="<?= htmlspecialchars($row['location_label'] ?? '') ?>"
+                      data-address="<?= htmlspecialchars($row['address'] ?? '') ?>">
+                      <i class="fas fa-map-marker-alt"></i> See location
+                    </button>
+                  <?php else: ?>
+                    <span class="location-missing">No pin</span>
                   <?php endif; ?>
                 </td>
               </tr>
@@ -784,6 +813,20 @@ $stmt->close();
       <p>Need help? Contact <a href="mailto:support@sewamandu.com">support@sewamandu.com</a></p>
     </div>
   </footer>
+
+  <div id="booking-location-modal" class="location-modal" hidden>
+    <div class="location-modal-backdrop" data-close-location-modal></div>
+    <div class="location-modal-panel" role="dialog" aria-labelledby="location-modal-title" aria-modal="true">
+      <button type="button" class="location-modal-close" data-close-location-modal aria-label="Close location">&times;</button>
+      <h2 id="location-modal-title">Service location</h2>
+      <p id="location-modal-label" class="location-modal-label"></p>
+      <p id="location-modal-address" class="location-modal-address"></p>
+      <div id="location-modal-map" class="location-modal-map"></div>
+      <a id="location-modal-maps-link" class="location-modal-maps-link" href="#" target="_blank" rel="noopener noreferrer">
+        <i class="fas fa-external-link-alt"></i> Open in Google Maps
+      </a>
+    </div>
+  </div>
 </body>
 <script src="../js/auto-capitalize.js"></script>
 <script>
@@ -791,5 +834,72 @@ $stmt->close();
     document.getElementById('profile-view').style.display = 'none';
     document.getElementById('profile-form').style.display = 'block';
   });
+
+  (function () {
+    const modal = document.getElementById('booking-location-modal');
+    if (!modal || typeof L === 'undefined') return;
+
+    const labelEl = document.getElementById('location-modal-label');
+    const addressEl = document.getElementById('location-modal-address');
+    const mapEl = document.getElementById('location-modal-map');
+    const mapsLink = document.getElementById('location-modal-maps-link');
+    let map = null;
+    let marker = null;
+
+    function openModal() {
+      modal.hidden = false;
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeModal() {
+      modal.hidden = true;
+      document.body.style.overflow = '';
+    }
+
+    function showLocation(lat, lng, label, address) {
+      openModal();
+      const title = label || 'Pinned location';
+      labelEl.textContent = title;
+      if (address) {
+        addressEl.hidden = false;
+        addressEl.textContent = address;
+      } else {
+        addressEl.hidden = true;
+        addressEl.textContent = '';
+      }
+      mapsLink.href = 'https://www.google.com/maps?q=' + encodeURIComponent(lat + ',' + lng);
+
+      if (!map) {
+        map = L.map(mapEl);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          maxZoom: 19,
+          attribution: '&copy; OpenStreetMap'
+        }).addTo(map);
+        marker = L.marker([lat, lng]).addTo(map);
+      } else {
+        marker.setLatLng([lat, lng]);
+      }
+      map.setView([lat, lng], 16);
+      setTimeout(function () { map.invalidateSize(); }, 80);
+    }
+
+    document.addEventListener('click', function (e) {
+      const btn = e.target.closest('.see-location-btn');
+      if (!btn) return;
+      e.preventDefault();
+      const lat = parseFloat(btn.dataset.lat);
+      const lng = parseFloat(btn.dataset.lng);
+      if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+      showLocation(lat, lng, btn.dataset.label || '', btn.dataset.address || '');
+    });
+
+    modal.querySelectorAll('[data-close-location-modal]').forEach(function (el) {
+      el.addEventListener('click', closeModal);
+    });
+
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && !modal.hidden) closeModal();
+    });
+  })();
 </script>
 </html>

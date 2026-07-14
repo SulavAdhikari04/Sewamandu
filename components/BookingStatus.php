@@ -1,5 +1,26 @@
 <?php
 
+function ensureBookingLocationColumns($conn) {
+    $conn->query("ALTER TABLE bookings ADD COLUMN IF NOT EXISTS latitude DECIMAL(10,7) NULL");
+    $conn->query("ALTER TABLE bookings ADD COLUMN IF NOT EXISTS longitude DECIMAL(10,7) NULL");
+    $conn->query("ALTER TABLE bookings ADD COLUMN IF NOT EXISTS location_label VARCHAR(255) NULL");
+}
+
+function parseBookingCoordinates($latitude, $longitude) {
+    if ($latitude === '' || $latitude === null || $longitude === '' || $longitude === null) {
+        return null;
+    }
+    if (!is_numeric($latitude) || !is_numeric($longitude)) {
+        return null;
+    }
+    $lat = (float) $latitude;
+    $lng = (float) $longitude;
+    if ($lat < -90 || $lat > 90 || $lng < -180 || $lng > 180) {
+        return null;
+    }
+    return ['latitude' => $lat, 'longitude' => $lng];
+}
+
 function getBlockingBookingStatuses() {
     return [
         'pending_provider',
