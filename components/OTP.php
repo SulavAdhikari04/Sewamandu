@@ -12,6 +12,10 @@ if (!defined('OTP_TTL_SECONDS')) {
 if (!defined('OTP_MAX_ATTEMPTS')) {
     define('OTP_MAX_ATTEMPTS', 5);
 }
+// Set to true to require email OTP on registration. False = skip for local testing.
+if (!defined('REQUIRE_REGISTER_OTP')) {
+    define('REQUIRE_REGISTER_OTP', true);
+}
 
 /**
  * Generate a zero-padded 6-digit OTP code.

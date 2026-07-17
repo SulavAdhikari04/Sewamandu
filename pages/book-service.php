@@ -16,6 +16,7 @@ $conn = getDBConnection();
 // Ensure the availability toggle column exists (MariaDB supports IF NOT EXISTS)
 $conn->query("ALTER TABLE users ADD COLUMN IF NOT EXISTS is_available TINYINT(1) NOT NULL DEFAULT 1");
 ensureBookingLocationColumns($conn);
+ensureBookingGroupColumn($conn);
 
 function nominatimRequest($url) {
     if (function_exists('curl_init')) {
@@ -314,11 +315,15 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['show_providers'])) {
     }
 }
 
-// Step 2: Handle booking with selected provider
+// Step 2: Handle booking with one or more selected providers (first to accept wins)
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['book_with_provider'])) {
-    $customer_id = $_SESSION['user_id']; // The logged-in customer
+    $customer_id = $_SESSION['user_id'];
     $service_id = intval($_POST['service_id']);
-    $provider_id = intval($_POST['provider_id']);
+    $raw_providers = $_POST['provider_ids'] ?? ($_POST['provider_id'] ?? []);
+    if (!is_array($raw_providers)) {
+        $raw_providers = [$raw_providers];
+    }
+    $provider_ids = array_values(array_unique(array_filter(array_map('intval', $raw_providers))));
     $service_date = $_POST['date'];
     $service_time = $_POST['time'] ?? '';
     $address = trim($_POST['address'] ?? '');
@@ -332,40 +337,71 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['book_with_provider']))
     if (!$coords) {
         $message = 'Service location is missing. Please go back and pin a location on the map.';
         $message_type = 'error';
-    } elseif (!isProviderTimeSlotAvailable($conn, $provider_id, $service_date, $service_time)) {
-        $message = 'This provider is already booked at the selected date and time. Please choose another provider or time slot.';
+    } elseif (count($provider_ids) === 0) {
+        $message = 'Please select at least one provider.';
         $message_type = 'error';
         $show_providers = true;
         $providers = fetchAvailableProviders($conn, $service_id, $service_date, $service_time);
     } else {
-        $lat_val = $coords['latitude'];
-        $lng_val = $coords['longitude'];
-        $stmt = $conn->prepare(
-            "INSERT INTO bookings (customer_id, service_id, status, booking_date, service_date, service_time, address, latitude, longitude, location_label, provider_id, served)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL)"
-        );
-        $stmt->bind_param(
-            "iisssssddsi",
-            $customer_id,
-            $service_id,
-            $status,
-            $booking_date,
-            $service_date,
-            $service_time,
-            $address,
-            $lat_val,
-            $lng_val,
-            $location_label,
-            $provider_id
-        );
-        if ($stmt->execute()) {
-            $message = "Booking request sent!";
-            $message_type = 'success';
-        } else {
-            $message = "Error: " . $stmt->error;
-            $message_type = 'error';
+        $available = [];
+        foreach ($provider_ids as $provider_id) {
+            if (isProviderTimeSlotAvailable($conn, $provider_id, $service_date, $service_time)) {
+                $available[] = $provider_id;
+            }
         }
-        $stmt->close();
+
+        if (count($available) === 0) {
+            $message = 'None of the selected providers are available at this date and time. Please choose other providers or another time slot.';
+            $message_type = 'error';
+            $show_providers = true;
+            $providers = fetchAvailableProviders($conn, $service_id, $service_date, $service_time);
+        } else {
+            $lat_val = $coords['latitude'];
+            $lng_val = $coords['longitude'];
+            $group_id = createBookingGroupId();
+            $stmt = $conn->prepare(
+                "INSERT INTO bookings (customer_id, service_id, status, booking_date, service_date, service_time, address, latitude, longitude, location_label, provider_id, booking_group_id, served)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL)"
+            );
+            $inserted = 0;
+            $insert_error = '';
+            if ($stmt) {
+                foreach ($available as $provider_id) {
+                    $stmt->bind_param(
+                        "iisssssddsis",
+                        $customer_id,
+                        $service_id,
+                        $status,
+                        $booking_date,
+                        $service_date,
+                        $service_time,
+                        $address,
+                        $lat_val,
+                        $lng_val,
+                        $location_label,
+                        $provider_id,
+                        $group_id
+                    );
+                    if ($stmt->execute()) {
+                        $inserted++;
+                    } else {
+                        $insert_error = $stmt->error;
+                    }
+                }
+                $stmt->close();
+            }
+
+            if ($inserted > 0) {
+                $count = $inserted;
+                $message = $count === 1
+                    ? 'Booking request sent!'
+                    : "Booking request sent to {$count} providers. The first to accept will get the job.";
+                $message_type = 'success';
+            } else {
+                $message = 'Error: ' . ($insert_error ?: 'Could not create booking.');
+                $message_type = 'error';
+            }
+        }
     }
 }
 closeDBConnection($conn);
@@ -396,7 +432,7 @@ closeDBConnection($conn);
       <div class="book-head">
         <span class="eyebrow"><?= $show_providers ? 'Step 2 of 2' : 'Step 1 of 2' ?></span>
         <h1>Book a Service</h1>
-        <p><?= $show_providers ? 'Choose a provider to confirm your booking.' : 'Tell us what you need and when — we\'ll find the right expert.' ?></p>
+        <p><?= $show_providers ? 'Select one or more providers. The first to accept gets the booking.' : 'Tell us what you need and when — we\'ll find the right expert.' ?></p>
       </div>
 
       <?php if ($message): ?>
@@ -545,11 +581,11 @@ closeDBConnection($conn);
                 <?php endif; ?>
               </p>
             <?php endif; ?>
-            <span class="provider-label">Select a Provider</span>
+            <span class="provider-label">Select Providers <small>(choose one or more)</small></span>
             <div class="provider-cards">
               <?php foreach ($providers as $provider): ?>
                 <div class="provider-card">
-                  <input type="radio" name="provider_id" value="<?= $provider['id'] ?>" required class="provider-radio" id="provider-<?= (int) $provider['id'] ?>">
+                  <input type="checkbox" name="provider_ids[]" value="<?= $provider['id'] ?>" class="provider-radio" id="provider-<?= (int) $provider['id'] ?>">
                   <div class="provider-name"><?= htmlspecialchars($provider['username']) ?></div>
                   <div class="provider-rating">
                     <?= renderStarRatingHtml($provider['avg_rating'], $provider['review_count']) ?>
@@ -566,7 +602,7 @@ closeDBConnection($conn);
                 </div>
               <?php endforeach; ?>
             </div>
-            <button type="submit" name="book_with_provider" class="auth-btn">Confirm Booking <i class="fas fa-check"></i></button>
+            <button type="submit" name="book_with_provider" class="auth-btn" id="confirm-booking-btn">Send Booking Request <i class="fas fa-check"></i></button>
           </form>
         <?php endif; ?>
       <?php endif; ?>
@@ -935,12 +971,25 @@ closeDBConnection($conn);
 
         const card = e.target.closest('.provider-card');
         if (card && !e.target.closest('.provider-view-btn')) {
-          const radio = card.querySelector('.provider-radio');
-          if (radio) {
-            radio.checked = !radio.checked;
+          const input = card.querySelector('.provider-radio');
+          if (input) {
+            input.checked = !input.checked;
           }
         }
       });
+
+      const providerForm = document.querySelector('form[method="POST"] #confirm-booking-btn')
+        ? document.querySelector('#confirm-booking-btn').closest('form')
+        : null;
+      if (providerForm) {
+        providerForm.addEventListener('submit', (e) => {
+          const checked = providerForm.querySelectorAll('input[name="provider_ids[]"]:checked');
+          if (checked.length === 0) {
+            e.preventDefault();
+            alert('Please select at least one provider.');
+          }
+        });
+      }
 
       modal.querySelectorAll('[data-close-modal]').forEach((el) => {
         el.addEventListener('click', closeModal);

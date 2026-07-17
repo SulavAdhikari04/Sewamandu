@@ -275,7 +275,11 @@ body {
   transition: border-color 0.5s var(--ease-soft), box-shadow 0.6s var(--ease-cinema), transform 0.6s var(--ease-cinema);
 }
 .provider-card:hover { transform: translateY(-4px); box-shadow: 0 18px 40px rgba(0, 77, 64, 0.12); }
-.provider-radio { position: absolute; opacity: 0; pointer-events: none; }
+.provider-label small {
+  font-weight: 400;
+  opacity: 0.7;
+  margin-left: 0.35rem;
+}
 .provider-card::after {
   content: "";
   position: absolute;

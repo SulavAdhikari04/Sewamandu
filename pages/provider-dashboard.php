@@ -30,6 +30,7 @@ $conn->query("ALTER TABLE users ADD COLUMN IF NOT EXISTS is_available TINYINT(1)
 $conn->query("ALTER TABLE users ADD COLUMN IF NOT EXISTS wallet_balance DECIMAL(10,2) NOT NULL DEFAULT 0.00");
 ensureTwoFactorColumn($conn);
 ensureBookingLocationColumns($conn);
+ensureBookingGroupColumn($conn);
 
 // Handle 2FA toggle
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['toggle_2fa'])) {
@@ -78,22 +79,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['wallet_topup'])) {
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['booking_id'], $_POST['action'])) {
     $booking_id = intval($_POST['booking_id']);
     if ($_POST['action'] === 'approve') {
-        // Only update if current status is 'pending_provider'
-        $stmt = $conn->prepare("SELECT status FROM bookings WHERE id = ? AND provider_id = ?");
-        $stmt->bind_param("ii", $booking_id, $provider_user_id);
-        $stmt->execute();
-        $stmt->bind_result($current_status);
-        $stmt->fetch();
-        $stmt->close();
-        if ($current_status === 'pending_provider') {
-            $stmt = $conn->prepare("UPDATE bookings SET status = 'confirmed' WHERE id = ? AND provider_id = ?");
-            $stmt->bind_param("ii", $booking_id, $provider_user_id);
-            $stmt->execute();
-            $stmt->close();
-            $message = 'Booking approved and confirmed.';
-        }
+        $result = acceptBookingRequest($conn, $booking_id, $provider_user_id);
+        $message = $result['message'];
     } elseif ($_POST['action'] === 'reject') {
-        $stmt = $conn->prepare("UPDATE bookings SET status = 'rejected_by_provider' WHERE id = ? AND provider_id = ?");
+        $stmt = $conn->prepare(
+            "UPDATE bookings SET status = 'rejected_by_provider'
+             WHERE id = ? AND provider_id = ? AND status = 'pending_provider'"
+        );
         $stmt->bind_param("ii", $booking_id, $provider_user_id);
         $stmt->execute();
         $stmt->close();

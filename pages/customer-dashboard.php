@@ -56,21 +56,37 @@ if (isset($_GET['ajax']) && $_GET['ajax'] === 'pending_reviews') {
 }
 
 $bookings = [];
-$sql = "SELECT b.id AS booking_id, b.provider_id, b.service_id, s.name AS service_name, u.username AS provider_name, b.service_date, b.status AS booking_status, r.id AS review_id, r.rating AS review_rating
+$sql = "SELECT b.id AS booking_id, b.provider_id, b.service_id, b.booking_group_id, s.name AS service_name, u.username AS provider_name, b.service_date, b.status AS booking_status, r.id AS review_id, r.rating AS review_rating
         FROM bookings b
         LEFT JOIN services s ON b.service_id = s.id
         LEFT JOIN users u ON b.provider_id = u.id
         LEFT JOIN reviews r ON b.id = r.booking_id
-        WHERE b.customer_id = ?
-        ORDER BY b.service_date DESC";
+        WHERE b.customer_id = ? AND b.status != 'taken_by_other'
+        ORDER BY b.service_date DESC, b.id DESC";
 $stmt = $conn->prepare($sql);
 $stmt->bind_param("i", $user_id);
 $stmt->execute();
 $result = $stmt->get_result();
+$raw_bookings = [];
 while ($row = $result->fetch_assoc()) {
-    $bookings[] = $row;
+    $raw_bookings[] = $row;
 }
 $stmt->close();
+
+// Collapse multi-provider pending requests into one customer-facing row
+$pending_groups = [];
+foreach ($raw_bookings as $row) {
+    $group_id = $row['booking_group_id'] ?? null;
+    if ($group_id && $row['booking_status'] === 'pending_provider') {
+        if (isset($pending_groups[$group_id])) {
+            $idx = $pending_groups[$group_id];
+            $bookings[$idx]['provider_name'] .= ', ' . $row['provider_name'];
+            continue;
+        }
+        $pending_groups[$group_id] = count($bookings);
+    }
+    $bookings[] = $row;
+}
 
 $review_success_msg = isset($_GET['review_success']) ? "Review submitted successfully!" : "";
 $review_error_msg = "";

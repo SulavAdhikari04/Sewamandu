@@ -6,6 +6,7 @@ require_once '../components/Database.php';
 require_once '../components/EmailConfig_Gmail.php';
 require_once '../components/OTP.php';
 require_once '../components/StringHelpers.php';
+require_once '../components/TrustedDevice.php';
 // Database connection
 $conn = getDBConnection();
 
@@ -29,7 +30,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         $fileName = $_FILES['provider_document']['name'];
     }
 
-    if (!preg_match("/^[a-z._%+-]+@[a-z.-]+\.[a-z]{2,}$/", $email)) {
+    if (!preg_match("/^[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$/", $email)) {
        $error[] = 'Invalid email format.';
    }
 
@@ -37,6 +38,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         $message = "Please fill in all fields.";
     } elseif ($password !== $confirmPassword) {
         $message = "Passwords do not match.";
+    } elseif (!empty($error)) {
+        $message = implode(' ', $error);
     } else {
         // Check for duplicate email
         $stmt = $conn->prepare("SELECT id FROM users WHERE email = ?");
@@ -48,26 +51,48 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             $stmt->close();
         } else {
             $stmt->close();
-            // Hash password and stash everything until the email OTP is verified
             $hashed_password = password_hash($password, PASSWORD_DEFAULT);
-            $payload = [
-                'name'      => $name,
-                'email'     => $email,
-                'phone'     => $phone,
-                'password'  => $hashed_password,
-                'role'      => $role,
-                'file_data' => $fileData,
-                'file_name' => $fileName,
-            ];
-            $code = startOtpSession('register', $email, $name, $payload);
-            $send = sendOtpEmail($email, $name, $code, 'complete your registration');
-            if (!empty($send['success'])) {
-                closeDBConnection($conn);
-                header('Location: verify-otp.php');
-                exit();
+
+            // Local testing: skip OTP and create the account immediately
+            if (!REQUIRE_REGISTER_OTP) {
+                if ($role === 'provider') {
+                    $stmt = $conn->prepare("INSERT INTO users (username, email, phone, password, role, provider_document, provider_document_name, status) VALUES (?, ?, ?, ?, ?, ?, ?, 'pending')");
+                    $stmt->bind_param("sssssss", $name, $email, $phone, $hashed_password, $role, $fileData, $fileName);
+                } else {
+                    $stmt = $conn->prepare("INSERT INTO users (username, email, phone, password, role, status) VALUES (?, ?, ?, ?, ?, 'active')");
+                    $stmt->bind_param("sssss", $name, $email, $phone, $hashed_password, $role);
+                }
+
+                if ($stmt->execute()) {
+                    trustDeviceForUser((int) $conn->insert_id);
+                    $stmt->close();
+                    closeDBConnection($conn);
+                    header('Location: login.php?registered=1');
+                    exit();
+                }
+                $message = 'Error creating account: ' . $stmt->error;
+                $stmt->close();
             } else {
-                unset($_SESSION['pending_otp']);
-                $message = "Could not send verification code. Please try again.";
+                // Hash password and stash everything until the email OTP is verified
+                $payload = [
+                    'name'      => $name,
+                    'email'     => $email,
+                    'phone'     => $phone,
+                    'password'  => $hashed_password,
+                    'role'      => $role,
+                    'file_data' => $fileData,
+                    'file_name' => $fileName,
+                ];
+                $code = startOtpSession('register', $email, $name, $payload);
+                $send = sendOtpEmail($email, $name, $code, 'complete your registration');
+                if (!empty($send['success'])) {
+                    closeDBConnection($conn);
+                    header('Location: verify-otp.php');
+                    exit();
+                } else {
+                    unset($_SESSION['pending_otp']);
+                    $message = "Could not send verification code. Please try again.";
+                }
             }
         }
     }
@@ -136,7 +161,7 @@ closeDBConnection($conn);
           <div class="auth-field">
             <label for="email">Email</label>
             <div class="input-shell">
-              <input type="email" id="email" name="email" placeholder="you@example.com" pattern="[a-zA-Z._%+\-]+@[a-zA-Z.\-]+\.[a-zA-Z]{2,}" title="Enter a valid email (e.g. you@example.com)" required />
+              <input type="email" id="email" name="email" placeholder="you@example.com" pattern="[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}" title="Enter a valid email (e.g. you@example.com)" required />
               <i class="fas fa-envelope"></i>
             </div>
           </div>
@@ -201,6 +226,16 @@ closeDBConnection($conn);
     var docUpload = document.getElementById('provider-doc-upload');
     docUpload.style.display = (this.value === 'provider') ? 'block' : 'none';
   });
+
+  (function () {
+    var email = document.getElementById('email');
+    if (!email) return;
+    function trimEmail() {
+      email.value = email.value.trim();
+    }
+    email.addEventListener('blur', trimEmail);
+    email.form.addEventListener('submit', trimEmail);
+  })();
   </script>
 </body>
 </html>

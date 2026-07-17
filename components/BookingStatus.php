@@ -6,6 +6,93 @@ function ensureBookingLocationColumns($conn) {
     $conn->query("ALTER TABLE bookings ADD COLUMN IF NOT EXISTS location_label VARCHAR(255) NULL");
 }
 
+function ensureBookingGroupColumn($conn) {
+    $conn->query("ALTER TABLE bookings ADD COLUMN IF NOT EXISTS booking_group_id VARCHAR(36) NULL");
+}
+
+function createBookingGroupId() {
+    if (function_exists('random_bytes')) {
+        $bytes = random_bytes(16);
+        $bytes[6] = chr((ord($bytes[6]) & 0x0f) | 0x40);
+        $bytes[8] = chr((ord($bytes[8]) & 0x3f) | 0x80);
+        $hex = bin2hex($bytes);
+        return substr($hex, 0, 8) . '-' . substr($hex, 8, 4) . '-' . substr($hex, 12, 4)
+            . '-' . substr($hex, 16, 4) . '-' . substr($hex, 20, 12);
+    }
+    return uniqid('grp_', true);
+}
+
+/**
+ * Confirm a pending booking for this provider and release sibling requests
+ * in the same booking group so they leave other providers' dashboards.
+ */
+function acceptBookingRequest($conn, $booking_id, $provider_id) {
+    $conn->begin_transaction();
+    try {
+        $stmt = $conn->prepare(
+            "SELECT status, booking_group_id FROM bookings WHERE id = ? AND provider_id = ? FOR UPDATE"
+        );
+        if (!$stmt) {
+            $conn->rollback();
+            return ['success' => false, 'message' => 'Could not verify booking.'];
+        }
+        $stmt->bind_param('ii', $booking_id, $provider_id);
+        $stmt->execute();
+        $stmt->bind_result($current_status, $group_id);
+        if (!$stmt->fetch()) {
+            $stmt->close();
+            $conn->rollback();
+            return ['success' => false, 'message' => 'Booking not found.'];
+        }
+        $stmt->close();
+
+        if ($current_status !== 'pending_provider') {
+            $conn->rollback();
+            if ($current_status === 'taken_by_other') {
+                return ['success' => false, 'message' => 'Another provider already accepted this request.'];
+            }
+            return ['success' => false, 'message' => 'This booking is no longer pending.'];
+        }
+
+        $confirm = $conn->prepare(
+            "UPDATE bookings SET status = 'confirmed' WHERE id = ? AND provider_id = ? AND status = 'pending_provider'"
+        );
+        if (!$confirm) {
+            $conn->rollback();
+            return ['success' => false, 'message' => 'Could not confirm booking.'];
+        }
+        $confirm->bind_param('ii', $booking_id, $provider_id);
+        $confirm->execute();
+        $confirmed = $confirm->affected_rows > 0;
+        $confirm->close();
+
+        if (!$confirmed) {
+            $conn->rollback();
+            return ['success' => false, 'message' => 'Another provider already accepted this request.'];
+        }
+
+        if ($group_id) {
+            $release = $conn->prepare(
+                "UPDATE bookings SET status = 'taken_by_other'
+                 WHERE booking_group_id = ? AND id != ? AND status = 'pending_provider'"
+            );
+            if (!$release) {
+                $conn->rollback();
+                return ['success' => false, 'message' => 'Could not update other providers\' requests.'];
+            }
+            $release->bind_param('si', $group_id, $booking_id);
+            $release->execute();
+            $release->close();
+        }
+
+        $conn->commit();
+        return ['success' => true, 'message' => 'Booking approved and confirmed.'];
+    } catch (Throwable $e) {
+        $conn->rollback();
+        return ['success' => false, 'message' => 'Could not accept booking.'];
+    }
+}
+
 function parseBookingCoordinates($latitude, $longitude) {
     if ($latitude === '' || $latitude === null || $longitude === '' || $longitude === null) {
         return null;
@@ -146,6 +233,8 @@ function getBookingStatusLabel($status) {
             return 'Rejected by Provider';
         case 'rejected_by_admin':
             return 'Rejected by Admin';
+        case 'taken_by_other':
+            return 'Accepted by Another Provider';
         default:
             return ucfirst(str_replace('_', ' ', $status));
     }
@@ -214,6 +303,7 @@ function getBookingStatusBadgeClass($status) {
         case 'denied':
         case 'rejected_by_provider':
         case 'rejected_by_admin':
+        case 'taken_by_other':
             return 'status-badge status-rejected';
         default:
             return 'status-badge';

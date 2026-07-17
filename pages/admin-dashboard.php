@@ -159,6 +159,7 @@ $sql = "SELECT b.id AS booking_id, s.name AS service_name, u.username AS custome
         JOIN users u ON b.customer_id = u.id
         JOIN users p ON b.provider_id = p.id
         LEFT JOIN reviews r ON b.id = r.booking_id
+        WHERE b.status != 'taken_by_other'
         ORDER BY b.service_date DESC, b.id DESC";
 $stmt = $conn->prepare($sql);
 $stmt->execute();
