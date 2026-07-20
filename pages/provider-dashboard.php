@@ -7,6 +7,7 @@ require_once '../components/Database.php';
 require_once '../components/BookingStatus.php';
 require_once '../components/StringHelpers.php';
 require_once '../components/TwoFactorAuth.php';
+require_once '../components/EsewaService.php';
 $all_services = [];
 if (session_status() === PHP_SESSION_NONE) {
 session_start();
@@ -31,6 +32,7 @@ $conn->query("ALTER TABLE users ADD COLUMN IF NOT EXISTS wallet_balance DECIMAL(
 ensureTwoFactorColumn($conn);
 ensureBookingLocationColumns($conn);
 ensureBookingGroupColumn($conn);
+ensureEsewaPaymentsTable($conn);
 
 // Handle 2FA toggle
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['toggle_2fa'])) {
@@ -486,23 +488,55 @@ $stmt->close();
               <div class="wm-balance-sub">
                 <?= $wallet_balance > 0 ? 'Available for withdrawal' : 'Top up to get requests' ?>
               </div>
-              <button type="button" class="wm-topup-btn">Top up</button>
+              <button type="button" class="wm-topup-btn" id="showTopupFormBtn">Top up</button>
             </div>
 
-            <div class="wm-row">
+            <!-- Payment Methods Header -->
+            <div class="wm-row" id="paymentMethodsHeader" style="display: none;">
               <div class="wm-row-icon"><i class="fa-solid fa-money-check-dollar"></i></div>
               <span class="wm-row-label">Payment methods</span>
-              <span class="wm-row-arrow"><i class="fa-solid fa-chevron-right"></i></span>
+              <span class="wm-row-arrow" id="paymentMethodsChevron"><i class="fa-solid fa-chevron-right"></i></span>
             </div>
 
-            <div class="wm-qr-card">
-              <div class="wm-qr-head">
-                <div class="wm-qr-icon"><i class="fa-solid fa-qrcode"></i></div>
-                <span class="wm-qr-title">QR payment</span>
-                <span class="wm-qr-badge">New</span>
+            <!-- Payment Methods Dropdown -->
+            <div class="wm-payment-methods-dropdown" id="paymentMethodsDropdown" style="display: none; background: #fff; border-radius: 14px; padding: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.12); flex-direction: column; gap: 8px; margin-top: -8px; animation: wmSlideIn 0.2s ease;">
+              
+              <!-- eSewa Option (Clickable) -->
+              <div class="wm-method-item clickable" id="methodEsewa" style="display: flex; flex-direction: column; padding: 12px; border-radius: 8px; cursor: pointer; background: #f9fbfb;">
+                <div style="display: flex; align-items: center; gap: 12px; width: 100%;">
+                  <div style="width: 28px; height: 28px; border-radius: 50%; background: #00897b; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 13px;"><i class="fa-solid fa-wallet"></i></div>
+                  <div style="flex: 1;">
+                    <div style="font-weight: 600; font-size: 0.95rem; color: #263238;">eSewa</div>
+                    <div style="font-size: 0.75rem; color: #728a83;">Pay securely using eSewa Wallet</div>
+                  </div>
+                  <div style="color: #00897b; font-size: 14px;" id="esewaSelectChevron"><i class="fa-solid fa-chevron-down"></i></div>
+                </div>
+                
+                <!-- Inner Expandable Top up Form -->
+                <form action="payment-initiate.php" method="POST" id="esewaDropdownForm" style="display: none; width: 100%; margin-top: 12px; border-top: 1px solid #e0f2f1; padding-top: 12px; flex-direction: column; gap: 10px;" onclick="event.stopPropagation();">
+                  <input type="number" name="topup_amount" min="10" placeholder="Enter amount (Rs.)" required style="padding: 12px 14px; border: 1px solid #c8dcd6; border-radius: 8px; font-size: 15px; font-family: inherit; color: #0b1f1c; background: #fff; width: 100%; box-sizing: border-box;">
+                  <button type="submit" style="background: #004d40; color: #fff; border: 1px solid rgba(255,255,255,0.4); border-radius: 8px; padding: 12px; font-size: 15px; font-weight: 600; cursor: pointer; width: 100%;">Pay via eSewa</button>
+                </form>
               </div>
-              <div class="wm-qr-desc">Get paid directly to your linked wallet (eSewa / Khalti).</div>
-              <button type="button" class="wm-link-btn">Link Wallet</button>
+
+              <!-- Khalti Option (Disabled) -->
+              <div class="wm-method-item disabled" style="display: flex; align-items: center; gap: 12px; padding: 12px; border-radius: 8px; opacity: 0.5; cursor: not-allowed; background: #fafafa;">
+                <div style="width: 28px; height: 28px; border-radius: 50%; background: #5c2d91; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 13px;"><i class="fa-solid fa-mobile-screen"></i></div>
+                <div style="flex: 1;">
+                  <div style="font-weight: 600; font-size: 0.95rem; color: #263238;">Khalti</div>
+                  <div style="font-size: 0.75rem; color: #728a83;">Coming Soon</div>
+                </div>
+              </div>
+
+              <!-- Debit/Credit Card Option (Disabled) -->
+              <div class="wm-method-item disabled" style="display: flex; align-items: center; gap: 12px; padding: 12px; border-radius: 8px; opacity: 0.5; cursor: not-allowed; background: #fafafa;">
+                <div style="width: 28px; height: 28px; border-radius: 50%; background: #ff9800; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 13px;"><i class="fa-solid fa-credit-card"></i></div>
+                <div style="flex: 1;">
+                  <div style="font-weight: 600; font-size: 0.95rem; color: #263238;">Debit/Credit Card</div>
+                  <div style="font-size: 0.75rem; color: #728a83;">Coming Soon</div>
+                </div>
+              </div>
+
             </div>
           </div>
         </div>
@@ -513,6 +547,17 @@ $stmt->close();
           }
           function closeWalletModal() {
             document.getElementById('walletModal').classList.remove('open');
+            var methodsHeader = document.getElementById('paymentMethodsHeader');
+            var methodsDropdown = document.getElementById('paymentMethodsDropdown');
+            var esewaForm = document.getElementById('esewaDropdownForm');
+            var methodsChevron = document.getElementById('paymentMethodsChevron');
+            var esewaSelectChevron = document.getElementById('esewaSelectChevron');
+
+            if (methodsHeader) methodsHeader.style.display = 'none';
+            if (methodsDropdown) methodsDropdown.style.display = 'none';
+            if (esewaForm) esewaForm.style.display = 'none';
+            if (methodsChevron) methodsChevron.innerHTML = '<i class="fa-solid fa-chevron-right"></i>';
+            if (esewaSelectChevron) esewaSelectChevron.innerHTML = '<i class="fa-solid fa-chevron-down"></i>';
           }
           document.addEventListener('click', function (e) {
             var modal = document.getElementById('walletModal');
@@ -521,6 +566,59 @@ $stmt->close();
           document.addEventListener('keydown', function (e) {
             if (e.key === 'Escape') closeWalletModal();
           });
+
+          // Toggle drop-downs and payment options
+          document.addEventListener('DOMContentLoaded', function() {
+            var showFormBtn = document.getElementById('showTopupFormBtn');
+            var methodsHeader = document.getElementById('paymentMethodsHeader');
+            var methodsDropdown = document.getElementById('paymentMethodsDropdown');
+            var methodsChevron = document.getElementById('paymentMethodsChevron');
+            var esewaMethod = document.getElementById('methodEsewa');
+            var esewaForm = document.getElementById('esewaDropdownForm');
+            var esewaSelectChevron = document.getElementById('esewaSelectChevron');
+
+            function toggleMethodsDropdown() {
+              if (!methodsDropdown) return;
+              var isHidden = methodsDropdown.style.display === 'none';
+              methodsDropdown.style.display = isHidden ? 'flex' : 'none';
+              if (methodsChevron) {
+                methodsChevron.innerHTML = isHidden ? '<i class="fa-solid fa-chevron-down"></i>' : '<i class="fa-solid fa-chevron-right"></i>';
+              }
+            }
+
+            // Top up button toggles the payment methods dropdown and shows methodsHeader
+            if (showFormBtn) {
+              showFormBtn.addEventListener('click', function(e) {
+                e.stopPropagation();
+                if (methodsHeader) {
+                  methodsHeader.style.display = 'flex';
+                }
+                toggleMethodsDropdown();
+              });
+            }
+
+            // Payment methods header toggles the payment methods dropdown
+            if (methodsHeader) {
+              methodsHeader.addEventListener('click', function(e) {
+                e.stopPropagation();
+                toggleMethodsDropdown();
+              });
+            }
+
+            // eSewa payment option toggles its inner form
+            if (esewaMethod) {
+              esewaMethod.addEventListener('click', function(e) {
+                e.stopPropagation();
+                if (!esewaForm) return;
+                var isHidden = esewaForm.style.display === 'none';
+                esewaForm.style.display = isHidden ? 'flex' : 'none';
+                if (esewaSelectChevron) {
+                  esewaSelectChevron.innerHTML = isHidden ? '<i class="fa-solid fa-chevron-up"></i>' : '<i class="fa-solid fa-chevron-down"></i>';
+                }
+              });
+            }
+          });
+
           function toggleWalletBalance() {
             var amount = document.getElementById('walletAmount');
             var icon = document.getElementById('walletEyeIcon');

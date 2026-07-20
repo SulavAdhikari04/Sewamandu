@@ -880,3 +880,12 @@ body {
 .location-modal-maps-link:hover {
   text-decoration: underline;
 }
+.wm-method-item.clickable:hover {
+  background: #e0f2f1 !important;
+}
+.wm-method-item {
+  transition: background 0.2s, transform 0.2s;
+}
+.wm-method-item.clickable:active {
+  transform: scale(0.98);
+}
