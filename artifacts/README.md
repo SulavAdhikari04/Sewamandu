@@ -74,8 +74,8 @@ To use a component in a page:
 6. Access the app at `http://localhost/sewamandu/pages/home.php`.
 
 ## Contact
-- Email: support@sewamandu.com
-- Phone: +977-9800000000
+- Email: sulavadhikari69@gmail.com or sauravshah1194@gmail.com
+- Phone: +977-9761610717
 
 ---
 © 2025 Sewamandu. All rights reserved. 
