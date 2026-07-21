@@ -512,7 +512,7 @@ closeDBConnection($conn);
   <footer class="footer">
     <div class="footer-container">
       <p>&copy; 2025 Sewamandu. All rights reserved.</p>
-      <p>Need help? Contact <a href="mailto:support@sewamandu.com">support@sewamandu.com</a></p>
+      <p>Need help? Contact <a href="mailto:sulavadhikari69@gmail.com">support@sewamandu.com</a></p>
     </div>
   </footer>
 </body>

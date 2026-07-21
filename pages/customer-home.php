@@ -304,8 +304,8 @@ if ($conn) {
       </div>
       <div class="footer-col">
         <h4>Contact Us</h4>
-        <p>Email: support@sewamandu.com</p>
-        <p>Phone: +977-9800000000</p>
+        <p>Email: sulavadhikari69@gmail.com</p>
+        <p>Phone: +977-9761610717</p>
         <div class="social">
           <a href="#" aria-label="Facebook"><i class="fab fa-facebook-f"></i></a>
           <a href="#" aria-label="Twitter"><i class="fab fa-twitter"></i></a>

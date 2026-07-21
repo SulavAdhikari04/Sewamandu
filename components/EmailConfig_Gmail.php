@@ -848,7 +848,7 @@ function generateWelcomeEmail($username, $role) {
                 <p>Best regards,<br>
                 <span class='team-name'>Sewamandu Team</span></p>
                 <div class='contact-info'>
-                    Need help? Contact us at support@sewamandu.com
+                    Need help? Contact us at sulavadhikari69@gmail.com
                 </div>
             </div>
         </div>
