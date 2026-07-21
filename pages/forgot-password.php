@@ -132,7 +132,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         <div class="auth-foot">
           <div class="divider">Remembered it?</div>
           <a href="login.php"><i class="fas fa-arrow-left"></i> Back to login</a>
-          <p style="margin-top:14px;">Need help? <a href="mailto:officialsewamandu@gmail.com">Contact Support</a></p>
+          <p style="margin-top:14px;">Need help? <a href="mailto:sulavadhikari69@gmail.com">Contact Support</a></p>
         </div>
       </div>
     </main>
