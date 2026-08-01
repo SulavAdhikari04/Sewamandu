@@ -204,7 +204,8 @@ if ($conn) {
       <div class="step-card">
         <div class="step-num"><i class="fas fa-calendar-check"></i></div>
         <h4>Book Appointment</h4>
-        <p>Pick a time that suits you confirm in a tap.</p>
+        <p>Pick a time that suits you 
+          confirm in a tap.</p>
       </div>
       <div class="step-card">
         <div class="step-num"><i class="fas fa-check-circle"></i></div>
