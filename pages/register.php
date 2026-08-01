@@ -7,6 +7,7 @@ require_once '../components/EmailConfig_Gmail.php';
 require_once '../components/OTP.php';
 require_once '../components/StringHelpers.php';
 require_once '../components/TrustedDevice.php';
+require_once '../components/PasswordPolicy.php';
 // Database connection
 $conn = getDBConnection();
 
@@ -34,10 +35,14 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
        $error[] = 'Invalid email format.';
    }
 
+    $passwordError = validatePasswordStrength($password ?? '');
+
     if (!$name || !$email || !$phone || !$password || !$confirmPassword || !$role) {
         $message = "Please fill in all fields.";
     } elseif ($password !== $confirmPassword) {
         $message = "Passwords do not match.";
+    } elseif ($passwordError !== null) {
+        $message = $passwordError;
     } elseif (!empty($error)) {
         $message = implode(' ', $error);
     } else {
@@ -176,16 +181,25 @@ closeDBConnection($conn);
 
           <div class="auth-field">
             <label for="password">Password</label>
+            <div id="password-format-warn" class="password-warn" role="alert">Please match format</div>
             <div class="input-shell">
-              <input type="password" id="password" name="password" placeholder="Create a password" required minlength="8" />
+              <input type="password" id="password" name="password" placeholder="Create a strong password" required autocomplete="new-password" />
               <i class="fas fa-lock"></i>
             </div>
+            <ul class="password-rules" id="password-rules" aria-live="polite">
+              <li data-rule="length">At least 8 characters</li>
+              <li data-rule="upper">One uppercase letter</li>
+              <li data-rule="lower">One lowercase letter</li>
+              <li data-rule="number">One number</li>
+              <li data-rule="special">One special character</li>
+              <li data-rule="space">No spaces</li>
+            </ul>
           </div>
 
           <div class="auth-field">
             <label for="confirm-password">Confirm Password</label>
             <div class="input-shell">
-              <input type="password" id="confirm-password" name="confirm-password" placeholder="Re-enter password" required minlength="8" />
+              <input type="password" id="confirm-password" name="confirm-password" placeholder="Re-enter password" required autocomplete="new-password" />
               <i class="fas fa-lock"></i>
             </div>
           </div>
@@ -221,21 +235,13 @@ closeDBConnection($conn);
   </div>
 
   <script src="../js/auto-capitalize.js"></script>
+  <script src="../js/password-policy.js?v=4"></script>
+  <script src="../js/register-form.js?v=1"></script>
   <script>
   document.getElementById('role').addEventListener('change', function() {
     var docUpload = document.getElementById('provider-doc-upload');
     docUpload.style.display = (this.value === 'provider') ? 'block' : 'none';
   });
-
-  (function () {
-    var email = document.getElementById('email');
-    if (!email) return;
-    function trimEmail() {
-      email.value = email.value.trim();
-    }
-    email.addEventListener('blur', trimEmail);
-    email.form.addEventListener('submit', trimEmail);
-  })();
   </script>
 </body>
 </html>

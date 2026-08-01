@@ -3,6 +3,7 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 require_once '../components/Database.php';
+require_once '../components/PasswordPolicy.php';
 
 $message = "";
 $message_type = "";
@@ -50,14 +51,16 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && $token_valid) {
     $password = $_POST['password'];
     $confirm_password = $_POST['confirm_password'];
     
+    $passwordError = validatePasswordStrength($password ?? '');
+
     if (!$password || !$confirm_password) {
         $message = "Please fill in all fields.";
         $message_type = "error";
-    } elseif (strlen($password) < 6) {
-        $message = "Password must be at least 6 characters long.";
-        $message_type = "error";
     } elseif ($password !== $confirm_password) {
         $message = "Passwords do not match.";
+        $message_type = "error";
+    } elseif ($passwordError !== null) {
+        $message = $passwordError;
         $message_type = "error";
     } else {
         $conn = getDBConnection();
@@ -133,17 +136,25 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && $token_valid) {
           <form method="POST" action="">
             <div class="auth-field">
               <label for="password">New Password</label>
+              <div id="password-format-warn" class="password-warn" role="alert">Please match format</div>
               <div class="input-shell">
-                <input type="password" id="password" name="password" placeholder="Enter new password" required>
+                <input type="password" id="password" name="password" placeholder="Enter a strong password" required autocomplete="new-password">
                 <i class="fas fa-lock"></i>
               </div>
-              <div class="field-hint">Password must be at least 6 characters long.</div>
+              <ul class="password-rules" id="password-rules" aria-live="polite">
+                <li data-rule="length">At least 8 characters</li>
+                <li data-rule="upper">One uppercase letter</li>
+                <li data-rule="lower">One lowercase letter</li>
+                <li data-rule="number">One number</li>
+                <li data-rule="special">One special character</li>
+                <li data-rule="space">No spaces</li>
+              </ul>
             </div>
 
             <div class="auth-field">
               <label for="confirm_password">Confirm New Password</label>
               <div class="input-shell">
-                <input type="password" id="confirm_password" name="confirm_password" placeholder="Confirm new password" required>
+                <input type="password" id="confirm_password" name="confirm_password" placeholder="Confirm new password" required autocomplete="new-password">
                 <i class="fas fa-lock"></i>
               </div>
             </div>
@@ -159,5 +170,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && $token_valid) {
     </main>
 
   </div>
+
+  <script src="../js/password-policy.js?v=3"></script>
 </body>
 </html> 

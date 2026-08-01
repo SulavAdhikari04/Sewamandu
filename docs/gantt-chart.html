@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Appendix A — Sewamandu Project Timeline (Gantt Chart)</title>
+  <style>
+    @page { size: A4 landscape; margin: 18mm; }
+    * { box-sizing: border-box; }
+    body {
+      font-family: "Times New Roman", Times, serif;
+      color: #111;
+      background: #fff;
+      margin: 0;
+      padding: 28px 36px;
+    }
+    h1 {
+      font-size: 18pt;
+      font-weight: 700;
+      text-align: center;
+      margin: 0 0 6px;
+    }
+    .subtitle {
+      text-align: center;
+      font-size: 11pt;
+      color: #333;
+      margin: 0 0 18px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      table-layout: fixed;
+      font-size: 11pt;
+    }
+    th, td {
+      border: 1px solid #1f4e79;
+      padding: 10px 8px;
+      vertical-align: middle;
+    }
+    thead th {
+      background: #1f4e79;
+      color: #fff;
+      font-weight: 700;
+      text-align: center;
+    }
+    thead th:first-child { text-align: left; width: 34%; }
+    tbody td:first-child {
+      text-align: left;
+      font-weight: 600;
+      padding-left: 12px;
+    }
+    tbody tr:nth-child(odd) td { background: #d6eaf8; }
+    tbody tr:nth-child(even) td { background: #ffffff; }
+    td.sprint {
+      text-align: center;
+      font-size: 14pt;
+      font-weight: 700;
+    }
+    td.sprint.active {
+      background: #c6efce !important;
+      color: #000;
+    }
+    .caption {
+      margin-top: 12px;
+      font-size: 11pt;
+      font-weight: 700;
+      text-align: center;
+    }
+    .note {
+      margin-top: 14px;
+      font-size: 9.5pt;
+      line-height: 1.45;
+      color: #222;
+    }
+    .note strong { font-weight: 700; }
+    @media print {
+      body { padding: 0; }
+    }
+  </style>
+</head>
+<body>
+  <h1>Appendix A: Project Timeline (Gantt Chart Overview)</h1>
+  <p class="subtitle">Incremental SDLC — Sewamandu Home Services Platform</p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Activity</th>
+        <th>Sprint 1<br><span style="font-weight:400;font-size:9pt">(Jun 2025)</span></th>
+        <th>Sprint 2<br><span style="font-weight:400;font-size:9pt">(Jul 2025)</span></th>
+        <th>Sprint 3<br><span style="font-weight:400;font-size:9pt">(Early Jun 2026)</span></th>
+        <th>Sprint 4<br><span style="font-weight:400;font-size:9pt">(Mid Jun 2026)</span></th>
+        <th>Sprint 5<br><span style="font-weight:400;font-size:9pt">(Jul–Aug 2026)</span></th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Project Setup, Structure &amp; DB Schema</td>
+        <td class="sprint active">✓</td>
+        <td class="sprint"></td>
+        <td class="sprint active">✓</td>
+        <td class="sprint"></td>
+        <td class="sprint active">✓</td>
+      </tr>
+      <tr>
+        <td>Authentication &amp; Session Management</td>
+        <td class="sprint active">✓</td>
+        <td class="sprint active">✓</td>
+        <td class="sprint"></td>
+        <td class="sprint active">✓</td>
+        <td class="sprint"></td>
+      </tr>
+      <tr>
+        <td>Admin Dashboard &amp; Provider Verification</td>
+        <td class="sprint active">✓</td>
+        <td class="sprint active">✓</td>
+        <td class="sprint active">✓</td>
+        <td class="sprint"></td>
+        <td class="sprint"></td>
+      </tr>
+      <tr>
+        <td>Customer &amp; Provider Dashboards</td>
+        <td class="sprint active">✓</td>
+        <td class="sprint"></td>
+        <td class="sprint active">✓</td>
+        <td class="sprint active">✓</td>
+        <td class="sprint active">✓</td>
+      </tr>
+      <tr>
+        <td>Service Catalog &amp; Booking Workflow</td>
+        <td class="sprint"></td>
+        <td class="sprint active">✓</td>
+        <td class="sprint active">✓</td>
+        <td class="sprint active">✓</td>
+        <td class="sprint active">✓</td>
+      </tr>
+      <tr>
+        <td>Reviews, Ratings &amp; Feedback Loop</td>
+        <td class="sprint"></td>
+        <td class="sprint"></td>
+        <td class="sprint active">✓</td>
+        <td class="sprint active">✓</td>
+        <td class="sprint"></td>
+      </tr>
+      <tr>
+        <td>Email OTP, 2FA &amp; Notifications</td>
+        <td class="sprint"></td>
+        <td class="sprint active">✓</td>
+        <td class="sprint"></td>
+        <td class="sprint active">✓</td>
+        <td class="sprint active">✓</td>
+      </tr>
+      <tr>
+        <td>Wallet, Maps &amp; Payment Integration</td>
+        <td class="sprint"></td>
+        <td class="sprint"></td>
+        <td class="sprint"></td>
+        <td class="sprint active">✓</td>
+        <td class="sprint active">✓</td>
+      </tr>
+      <tr>
+        <td>UI/UX Polish, Testing &amp; Deployment</td>
+        <td class="sprint"></td>
+        <td class="sprint"></td>
+        <td class="sprint active">✓</td>
+        <td class="sprint"></td>
+        <td class="sprint active">✓</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p class="caption">Table 6.1: Gantt Chart (Incremental Model)</p>
+
+  <div class="note">
+    <strong>Sprint mapping (derived from
+    <a href="https://github.com/SulavAdhikari04/Sewamandu.git">Sewamandu commit history</a>):</strong><br>
+    <strong>Sprint 1:</strong> Initial GharSewa setup, component structure, session/cookie auth, admin layout.<br>
+    <strong>Sprint 2:</strong> SessionManager, admin certificate review, forgot-password &amp; welcome email system.<br>
+    <strong>Sprint 3:</strong> Rebrand to Sewamandu, booking status flow, concurrent-slot fix, reviews system, dashboard UI.<br>
+    <strong>Sprint 4:</strong> Provider availability toggle, wallet, profile management, email OTP, optional 2FA &amp; trusted devices.<br>
+    <strong>Sprint 5:</strong> Map-based location picking, multi-provider booking, eSewa API trial, home/UI polish &amp; deployment readiness.<br><br>
+    Activities span multiple sprints where modules were refined iteratively, reflecting an incremental SDLC rather than a strictly sequential waterfall plan.
+  </div>
+</body>
+</html>

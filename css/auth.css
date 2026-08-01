@@ -263,6 +263,63 @@ body {
 /* Inline hint under a field */
 .field-hint { font-size: 0.78rem; color: #8a9b96; margin-top: 6px; }
 
+.password-rules {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 4px;
+}
+.password-rules li {
+  font-size: 0.75rem;
+  color: #8a9b96;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.password-rules li::before {
+  content: "○";
+  font-size: 0.7rem;
+  color: #b0c0ba;
+}
+.password-rules li.ok { color: #0b7a66; }
+.password-rules li.ok::before { content: "✓"; color: #0b7a66; }
+.password-rules li.bad { color: #a35a4a; }
+.password-rules li.bad::before { content: "×"; color: #a35a4a; }
+
+.password-warn {
+  display: none;
+  margin: 0 0 8px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  line-height: 1.35;
+  color: #b3261e;
+  background: #fdecea;
+  border: 1px solid #f5c6c2;
+}
+.password-warn.show { display: block; }
+.auth-field input.is-invalid,
+.auth-field select.is-invalid,
+.auth-file input.is-invalid {
+  border-color: #d46a6a !important;
+  box-shadow: 0 0 0 4px rgba(179, 38, 30, 0.12) !important;
+}
+.field-inline-error {
+  margin-top: 6px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #b3261e;
+}
+.field-flash {
+  animation: fieldFlash 0.7s ease 0s 3;
+}
+@keyframes fieldFlash {
+  0%, 100% { box-shadow: 0 0 0 4px rgba(179, 38, 30, 0.12); }
+  50% { box-shadow: 0 0 0 6px rgba(179, 38, 30, 0.28); background: #fff5f4; }
+}
+
 /* Spinner used on the forgot-password submit button */
 .btn-spin {
   display: none;
